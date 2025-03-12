@@ -1,31 +1,28 @@
 {
   "name": "docs",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3001",
+    "dev": "next dev --turbopack --port 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint --max-warnings 0",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "database": "*",
-    "next": "^13.4.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "ui": "*"
+    "@repo/ui": "workspace:*",
+    "next": "^15.2.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@prisma/nextjs-monorepo-workaround-plugin": "^4.14.1",
-    "@types/node": "^18.11.17",
-    "@types/react": "^18.2.5",
-    "@types/react-dom": "^18.2.4",
-    "autoprefixer": "^10.4.13",
-    "eslint-config-custom": "*",
-    "postcss": "^8.4.20",
-    "tailwind-config": "*",
-    "tailwindcss": "^3.2.4",
-    "tsconfig": "*",
-    "typescript": "^4.9.4"
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.13.9",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "19.0.4",
+    "eslint": "^9.22.0",
+    "typescript": "5.8.2"
   }
 }

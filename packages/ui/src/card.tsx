@@ -1,29 +1,27 @@
-import * as React from "react";
+import { type JSX } from "react";
 
-export const Card = ({
+export function Card({
+  className,
   title,
-  cta,
+  children,
   href,
 }: {
+  className?: string;
   title: string;
-  cta?: string;
-  href?: string;
-}) => {
+  children: React.ReactNode;
+  href: string;
+}): JSX.Element {
   return (
     <a
-      target="_blank"
+      className={className}
+      href={`${href}?utm_source=create-turbo&utm_medium=basic&utm_campaign=create-turbo"`}
       rel="noopener noreferrer"
-      href={href}
-      className="ui-group ui-mt-4 ui-rounded-lg ui-border ui-border-transparent ui-overflow-hidden ui-bg-origin-border ui-bg-gradient-to-r ui-from-brandred ui-to-brandblue ui-text-[#6b7280]"
+      target="_blank"
     >
-      <div className="ui-p-4 ui-bg-zinc-900 ui-h-full">
-        <p className="ui-inline-block ui-text-xl ui-text-white">{title}</p>
-        {cta ? (
-          <div className="ui-text-xs ui-mt-4 group-hover:ui-underline">
-            {cta} →
-          </div>
-        ) : null}
-      </div>
+      <h2>
+        {title} <span>-&gt;</span>
+      </h2>
+      <p>{children}</p>
     </a>
   );
-};
+}
