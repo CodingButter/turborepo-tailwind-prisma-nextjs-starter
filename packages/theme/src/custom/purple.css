@@ -1,0 +1,59 @@
+@layer base {
+    :root {
+        --icon-purple: oklch(0.627 0.265 303.9);
+    }
+}
+
+.theme-purple {
+    --color-primary: oklch(0.627 0.265 303.9);
+    /* purple-500 */
+    --color-primary-light: oklch(0.714 0.203 305.504);
+    /* purple-400 */
+    --color-primary-dark: oklch(0.558 0.288 302.321);
+    /* purple-600 */
+
+    --color-secondary: oklch(0.627 0.265 303.9);
+    /* purple-500 */
+    --color-secondary-light: oklch(0.714 0.203 305.504);
+    /* purple-400 */
+    --color-secondary-dark: oklch(0.558 0.288 302.321);
+    /* purple-600 */
+
+    --color-accent: oklch(0.667 0.295 322.15);
+    /* fuchsia-500 */
+    --color-accent-light: oklch(0.74 0.238 322.16);
+    /* fuchsia-400 */
+    --color-accent-dark: oklch(0.591 0.293 322.896);
+    /* fuchsia-600 */
+
+    --color-background: oklch(0.283 0.141 291.089);
+    /* violet-950 */
+    --color-background-secondary: oklch(0.38 0.189 293.745);
+    /* violet-900 */
+    --color-background-tertiary: oklch(0.432 0.232 292.759);
+    /* violet-800 */
+
+    --color-surface: oklch(0.38 0.189 293.745);
+    /* violet-900 */
+    --color-surface-hover: oklch(0.432 0.232 292.759);
+    /* violet-800 */
+
+    --color-border: oklch(0.491 0.27 292.581);
+    /* violet-700 */
+    --color-border-light: oklch(0.541 0.281 293.009);
+    /* violet-600 */
+
+    --color-text: oklch(0.985 0 0);
+    /* white */
+    --color-text-secondary: oklch(0.894 0.057 293.283);
+    /* violet-200 */
+    --color-text-tertiary: oklch(0.811 0.111 293.571);
+    /* violet-300 */
+
+    --color-chat-self: oklch(0.667 0.295 322.15);
+    /* fuchsia-500 */
+    --color-chat-mention: oklch(0.74 0.238 322.16);
+    /* fuchsia-400 */
+    --color-chat-system: oklch(0.591 0.293 322.896);
+    /* fuchsia-600 */
+}

@@ -1,0 +1,59 @@
+@layer base {
+    :root {
+        --icon-blue: oklch(0.723 0.219 149.579);
+    }
+}
+
+.theme-green {
+    --color-primary: oklch(0.723 0.219 149.579);
+    /* green-500 */
+    --color-primary-light: oklch(0.792 0.209 151.711);
+    /* green-400 */
+    --color-primary-dark: oklch(0.627 0.194 149.214);
+    /* green-600 */
+
+    --color-secondary: oklch(0.696 0.17 162.48);
+    /* emerald-500 */
+    --color-secondary-light: oklch(0.765 0.177 163.223);
+    /* emerald-400 */
+    --color-secondary-dark: oklch(0.596 0.145 163.225);
+    /* emerald-600 */
+
+    --color-accent: oklch(0.704 0.14 182.503);
+    /* teal-500 */
+    --color-accent-light: oklch(0.777 0.152 181.912);
+    /* teal-400 */
+    --color-accent-dark: oklch(0.6 0.118 184.704);
+    /* teal-600 */
+
+    --color-background: oklch(0.266 0.065 152.934);
+    /* green-950 */
+    --color-background-secondary: oklch(0.393 0.095 152.535);
+    /* green-900 */
+    --color-background-tertiary: oklch(0.448 0.119 151.328);
+    /* green-800 */
+
+    --color-surface: oklch(0.393 0.095 152.535);
+    /* green-900 */
+    --color-surface-hover: oklch(0.448 0.119 151.328);
+    /* green-800 */
+
+    --color-border: oklch(0.527 0.154 150.069);
+    /* green-700 */
+    --color-border-light: oklch(0.627 0.194 149.214);
+    /* green-600 */
+
+    --color-text: oklch(0.985 0 0);
+    /* white */
+    --color-text-secondary: oklch(0.925 0.084 155.995);
+    /* green-200 */
+    --color-text-tertiary: oklch(0.871 0.15 154.449);
+    /* green-300 */
+
+    --color-chat-self: oklch(0.696 0.17 162.48);
+    /* emerald-500 */
+    --color-chat-mention: oklch(0.765 0.177 163.223);
+    /* emerald-400 */
+    --color-chat-system: oklch(0.596 0.145 163.225);
+    /* emerald-600 */
+}

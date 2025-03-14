@@ -1,0 +1,79 @@
+@theme {
+  /* Color Palette */
+  --color-primary: oklch(0.606 0.25 292.717);
+  /* Default: violet-500 */
+  --color-primary-light: oklch(0.702 0.183 293.541);
+  /* Default: violet-400 */
+  --color-primary-dark: oklch(0.541 0.281 293.009);
+  /* Default: violet-600 */
+
+  --color-secondary: oklch(0.673 0.182 276.935);
+  /* Default: indigo-400 */
+  --color-secondary-light: oklch(0.785 0.115 274.713);
+  /* Default: indigo-300 */
+  --color-secondary-dark: oklch(0.585 0.233 277.117);
+  /* Default: indigo-500 */
+
+  --color-accent: oklch(0.645 0.246 16.439);
+  /* Default: rose-500 */
+  --color-accent-light: oklch(0.712 0.194 13.428);
+  /* Default: rose-400 */
+  --color-accent-dark: oklch(0.586 0.253 17.585);
+  /* Default: rose-600 */
+
+  /* UI Colors */
+  --color-background: oklch(0.205 0 0);
+  /* Default: neutral-900 */
+  --color-background-secondary: oklch(0.269 0 0);
+  /* Default: neutral-800 */
+  --color-background-tertiary: oklch(0.371 0 0);
+  /* Default: neutral-700 */
+
+  --color-surface: oklch(0.278 0.033 256.848);
+  /* Default: gray-800 */
+  --color-surface-hover: oklch(0.373 0.034 259.733);
+  /* Default: gray-700 */
+
+  --color-border: oklch(0.373 0.034 259.733);
+  /* Default: gray-700 */
+  --color-border-light: oklch(0.446 0.03 256.802);
+  /* Default: gray-600 */
+
+  --color-text: oklch(0.985 0 0);
+  /* Default: white */
+  --color-text-secondary: oklch(0.705 0.015 286.067);
+  /* Default: zinc-400 */
+  --color-text-tertiary: oklch(0.552 0.016 285.938);
+  /* Default: zinc-500 */
+
+  /* Status Colors */
+  --color-success: oklch(0.723 0.219 149.579);
+  /* Default: green-500 */
+  --color-error: oklch(0.637 0.237 25.331);
+  /* Default: red-500 */
+  --color-warning: oklch(0.769 0.188 70.08);
+  /* Default: amber-500 */
+  --color-info: oklch(0.685 0.169 237.323);
+  /* Default: sky-500 */
+
+  /* Component-specific colors */
+  --color-chat-self: oklch(0.511 0.262 276.966);
+  /* Default: indigo-600 */
+  --color-chat-mention: oklch(0.541 0.281 293.009);
+  /* Default: violet-600 */
+  --color-chat-system: oklch(0.446 0.03 256.802);
+  /* Default: gray-600 */
+
+  /* Shadows */
+  --shadow-chat-card: var(--shadow-md);
+  --shadow-popup: var(--shadow-xl);
+
+  /* Border Radius */
+  --radius-button: var(--radius-md);
+  --radius-input: var(--radius-md);
+  --radius-card: var(--radius-lg);
+
+  /* Transitions */
+  --transition-normal: 150ms;
+  --transition-slow: 300ms;
+}

@@ -5,8 +5,16 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@components/*": ["components/*"],
+      "@lib/*": ["lib/*"],
+      "@styles/*": ["styles/*"],
+      "@types/*": ["types/*"]
+    }
   },
+  
   "include": [
     "**/*.ts",
     "**/*.tsx",

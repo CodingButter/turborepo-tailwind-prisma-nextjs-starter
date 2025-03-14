@@ -1,0 +1,28 @@
+{
+  "name": "@repo/theme",
+  "version": "1.0.0",
+  "description": "shared tailwind css package",
+  "main": "src/main.ts",
+  "author": "",
+  "license": "ISC",
+  "scripts": {
+    "lint": "eslint . --max-warnings 0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "19.0.10"
+  },
+  "peerDependencies": {
+    "@tailwindcss/cli": "^4.0.13",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "tailwindcss": "^4.0.13"
+  },
+  "dependencies": {
+    "@repo/storage": "workspace:*",
+    "@tailwindcss/postcss": "^4.0.13",
+    "lucide-react": "^0.479.0",
+    "postcss": "^8.5.3"
+  }
+}

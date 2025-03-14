@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { TIRCClientProvider } from "@repo/tirc";
+import "@repo/theme/global.css";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -25,17 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <TIRCClientProvider config={
-          {
-            server: "irc.chat.twitch.tv",
-            nick: "tirc",
-            "oauthToken": "youroauthtoken",
-            channels: ["#yourchannel"],
-            clientId: "yourclientid",
-          }
-        }>
         {children}
-        </TIRCClientProvider>
       </body>
     </html>
   );
