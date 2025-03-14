@@ -1,7 +1,7 @@
-// packages/theme/src/context/ThemeProvider.tsx with fixes
+// packages/theme/src/context/ThemeProvider.tsx
 
 'use client'
-import React, { useEffect, ReactNode , useState} from "react"
+import React, { useEffect, ReactNode, useState } from "react"
 import { ThemeContext, ThemeMode } from "../hooks/useTheme"
 import "@/global.css"
 import { Sun, Moon, Palette } from "lucide-react"
@@ -43,31 +43,50 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   defaultTheme = "dark",
 }) => {
-  // Use a regular useState hook to prevent hydration issues
-  const [theme, setThemeState] = useStorage<ThemeMode>(defaultTheme)
-   const [initialized, setInitialized] = useState(false)
-
-  // Apply the theme CSS classes
+  // State for client-side rendering
+  const [mounted, setMounted] = useState(false)
+  
+  // Use storage hook but don't rely on it during SSR
+  const [storedTheme, setStoredTheme] = useStorage<ThemeMode>(defaultTheme, "theme-preference")
+  
+  // State that will only be used after hydration
+  const [theme, setThemeState] = useState<ThemeMode>(defaultTheme)
+  
+  // Effect to handle hydration and initialize from localStorage
   useEffect(() => {
-    if (!initialized) {
-      setInitialized(true)
-    }
-    else {
+    setMounted(true)
+    setThemeState(storedTheme)
+  }, [storedTheme])
+
+  // Apply theme CSS classes only on client-side
+  useEffect(() => {
+    if (mounted) {
       // Remove previous theme classes
       document.documentElement.classList.remove(...classList.split(" "))
       // Add current theme class
       document.documentElement.classList.add(`theme-${theme}`)
     }
-  }, [theme,initialized])
+  }, [theme, mounted])
 
   // Wrap the setTheme function
   const setTheme = (newTheme: ThemeMode) => {
     if (themes.some((t) => t.value === newTheme)) {
       setThemeState(newTheme)
+      setStoredTheme(newTheme)
     }
   }
 
-  // Provide the context value
+  // During SSR or before hydration, render with default theme only
+  // This prevents hydration errors by ensuring server and client render the same content initially
+  if (!mounted) {
+    return (
+      <ThemeContext.Provider value={{ theme: defaultTheme, setTheme }}>
+        {children}
+      </ThemeContext.Provider>
+    )
+  }
+
+  // After hydration, render with the actual theme state
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
