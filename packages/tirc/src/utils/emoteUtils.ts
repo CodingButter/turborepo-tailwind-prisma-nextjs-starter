@@ -7,10 +7,10 @@ const TWITCH_API = "https://api.twitch.tv/helix";
 const TWITCH_CDN = "https://static-cdn.jtvnw.net/emoticons/v2";
 
 // URL Generators
-const bttvUrl = (emoteId: string, size: string): string => 
+const bttvUrl = (emoteId: string, size: string): string =>
   `https://cdn.betterttv.net/emote/${emoteId}/${size}`;
 
-const twitchUrl = (emoteId: string, size: string = "1.0"): string => 
+const twitchUrl = (emoteId: string, size: string = "1.0"): string =>
   `${TWITCH_CDN}/${emoteId}/default/dark/${size}`;
 
 // Cache for regex patterns
@@ -43,7 +43,7 @@ export interface IBTTVEmote {
 
 export interface IFFZEmote {
   id: number;
-  name: string
+  name: string;
   urls: {
     "1": string;
     "2"?: string;
@@ -114,8 +114,8 @@ const convertTwitchEmote = (emote: ITwitchEmote): IEmote => ({
 
 // Generic error handling for fetch operations
 const safeApiFetch = async <T>(
-  url: string, 
-  options: RequestInit = {}, 
+  url: string,
+  options: RequestInit = {},
   errorMessage: string = "API request failed"
 ): Promise<T> => {
   try {
@@ -165,7 +165,6 @@ export const fetchBTTVChannelEmotes = async (
       {},
       "Error fetching BTTV channel emotes"
     );
-    
     return [...(data.channelEmotes || []), ...(data.sharedEmotes || [])]
       .map(convertBTTVEmote);
   } catch (error) {
@@ -186,7 +185,6 @@ export const fetchFFZGlobalEmotes = async (): Promise<IEmote[]> => {
       {},
       "Error fetching FFZ global emotes"
     );
-    
     return Object.values(data.sets)
       .flatMap((set) => set.emoticons)
       .map(convertFFZEmote);
@@ -209,7 +207,6 @@ export const fetchFFZChannelEmotes = async (channelId: string): Promise<IEmote[]
       {},
       "Error fetching FFZ channel emotes"
     );
-    
     return Object.values(data.sets)
       .flatMap((set) => set.emoticons)
       .map(convertFFZEmote);
@@ -232,22 +229,18 @@ export const fetchTwitchEmotes = async (
       "Client-ID": clientId,
       Authorization: `Bearer ${oauthToken}`,
     };
-    
     const userData = await safeApiFetch<{ data: Array<{ id: string }> }>(
       `${TWITCH_API}/users`,
       { headers },
       "Failed to fetch Twitch user"
     );
-    
     const userId = userData.data[0]?.id;
     if (!userId) throw new Error("User ID not found");
-
     const emotesData = await safeApiFetch<{ data: ITwitchEmote[] }>(
       `${TWITCH_API}/chat/emotes?broadcaster_id=${userId}`,
       { headers },
       "Failed to fetch Twitch emotes"
     );
-
     return emotesData.data.map(convertTwitchEmote);
   } catch (error) {
     console.error("Error fetching Twitch emotes:", error);
@@ -262,7 +255,6 @@ export const fetchTwitchEmotes = async (
  */
 export const formatMessageWithEmotes = (message: string, emotes: IEmote[]): string => {
   if (!message || !emotes.length) return message;
-  
   return emotes.reduce((formattedMessage, emote) => {
     const regex = getWordBoundaryRegex(emote.name);
     return formattedMessage.replace(
@@ -284,51 +276,48 @@ export const extractEmotesFromMessage = (message: string, emotes: IEmote[]): IEm
 
 /**
  * Parses the emotes string from Twitch IRC tags and extracts emote information.
- * @param emoteString - The emotes string from Twitch IRC tags (e.g. "25:0-4,12-16/1902:6-10")
+ * @param emoteString - The emotes string from Twitch IRC tags (e.g., "25:0-4,12-16/1902:6-10")
  * @param message - The original message text
  * @returns Array of parsed emote objects with id, code, and positions
  */
 export const parseEmotes = (
-  emoteString: string | undefined, 
+  emoteString: string | undefined,
   message: string = ""
-): Array<{id: string, code: string, positions: EmotePosition[]}> => {
+): Array<{ id: string; code: string; positions: EmotePosition[] }> => {
   if (!emoteString || !message) return [];
-  
-  return emoteString.split('/')
+  return emoteString
+    .split('/')
     .filter(Boolean)
     .map(emotePart => {
       const parts = emotePart.split(':');
       if (parts.length !== 2) return null;
-      
       const [emoteId, positionsStr] = parts;
       if (!emoteId || !positionsStr) return null;
-      
       const positions: EmotePosition[] = positionsStr
         .split(',')
         .map(positionPart => {
-          const [startStr, endStr] = positionPart.split('-');
+          let [startStr, endStr] = positionPart.split('-');
+          startStr = startStr || "";
+          endStr = endStr || "";
           const start = parseInt(startStr, 10);
           const end = parseInt(endStr, 10);
-          
           return !isNaN(start) && !isNaN(end) ? { start, end } : null;
         })
         .filter((pos): pos is EmotePosition => pos !== null);
-      
       if (positions.length === 0) return null;
-      
-      const firstPosition = positions[0];
-      if (!firstPosition) return null;
-      
-      const code = message.substring(firstPosition.start, firstPosition.end + 1);
-      
+      const firstPosition = positions[0]!;
+      const startIdx = firstPosition.start;
+      const endIdx = firstPosition.end + 1;
+      const code = message.substring(startIdx, endIdx);
       return {
         id: emoteId,
         code,
-        positions
+        positions,
       };
     })
-    .filter((emote): emote is {id: string, code: string, positions: EmotePosition[]} => 
-      emote !== null
+    .filter(
+      (emote): emote is { id: string; code: string; positions: EmotePosition[] } =>
+        emote !== null
     );
 };
 
@@ -349,14 +338,12 @@ export const getTwitchEmoteUrl = (id: string, size: "1.0" | "2.0" | "3.0" = "1.0
  * @returns Array of string or emote objects
  */
 export const splitMessageWithEmotes = (
-  message: string, 
-  emotes: Array<{id: string, code: string, positions?: EmotePosition[]}>
+  message: string,
+  emotes: Array<{ id: string, code: string, positions?: EmotePosition[] }>
 ): MessagePart[] => {
   if (!message || !emotes.length) return [message];
-  
   // Collect all position ranges
-  const ranges: Array<{start: number, end: number, emote: EmoteInfo}> = [];
-  
+  const ranges: Array<{ start: number, end: number, emote: EmoteInfo }> = [];
   // Process all emotes to build ranges
   emotes.forEach(emote => {
     if (emote.positions && emote.positions.length > 0) {
@@ -370,62 +357,52 @@ export const splitMessageWithEmotes = (
       });
     } else {
       // Find positions by regex
-      const regex = getWordBoundaryRegex(emote.code);
+      const safeCode = emote.code || "";
+      const regex = getWordBoundaryRegex(safeCode);
       let match;
       while ((match = regex.exec(message)) !== null) {
         ranges.push({
           start: match.index,
-          end: match.index + emote.code.length - 1,
-          emote: { id: emote.id, code: emote.code }
+          end: match.index + safeCode.length - 1,
+          emote: { id: emote.id, code: safeCode }
         });
       }
     }
   });
-  
   // Sort ranges by start position
   ranges.sort((a, b) => a.start - b.start);
-  
   // Merge overlapping ranges
-  const mergedRanges = ranges.reduce<Array<{start: number, end: number, emote: EmoteInfo}>>((acc, range) => {
+  const mergedRanges = ranges.reduce<Array<{ start: number, end: number, emote: EmoteInfo }>>((acc, range) => {
     if (acc.length === 0) {
       acc.push(range);
       return acc;
     }
-    
-    const prevRange = acc[acc.length - 1];
-    
+    const prevRange = acc[acc.length - 1]!;
     if (range.start > prevRange.end) {
       // No overlap, add to result
       acc.push(range);
     }
     // Else, overlapping range is ignored
-    
     return acc;
   }, []);
-  
   // If no merged ranges, just return the original message
   if (mergedRanges.length === 0) {
     return [message];
   }
-  
   // Split message into parts
   return mergedRanges.reduce<MessagePart[]>((parts, range, idx) => {
-    const prevRange = idx > 0 ? mergedRanges[idx - 1] : null;
-    const prevEnd = prevRange ? prevRange.end + 1 : 0;
-    
+    const prevRange = idx > 0 ? mergedRanges[idx - 1]! : null;
+    const prevEnd = prevRange !== null ? prevRange.end + 1 : 0;
     // Add text before this emote if there is any
     if (range.start > prevEnd) {
       parts.push(message.substring(prevEnd, range.start));
     }
-    
     // Add the emote
     parts.push(range.emote);
-    
     // Add any text after the last emote
     if (idx === mergedRanges.length - 1 && range.end < message.length - 1) {
       parts.push(message.substring(range.end + 1));
     }
-    
     return parts;
   }, []);
 };
