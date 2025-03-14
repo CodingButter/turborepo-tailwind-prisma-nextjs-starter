@@ -1,6 +1,8 @@
 'use client'
 import React, { useState, useEffect } from "react"
-import { useTheme,themes } from "../hooks/useTheme"
+import { useTheme, themes } from "../hooks/useTheme"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+
 interface ThemeSwitcherProps {
   className?: string
 }
@@ -31,8 +33,21 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className = "" }) 
 
   // Go to a specific page when clicking on a dot
   const goToPage = (pageIndex: number) => {
-    if (pageIndex !== currentPage) {
+    if (pageIndex >= 0 && pageIndex < totalPages) {
       setCurrentPage(pageIndex)
+    }
+  }
+
+  // Next and previous page functions
+  const nextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const prevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1)
     }
   }
 
@@ -41,10 +56,10 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className = "" }) 
     setCurrentPage(0)
   }, [theme])
 
-  return currentThemeObject && theme && setTheme && (
+  return currentThemeObject && theme && setTheme ? (
     <div className={`flex flex-col ${className}`}>
       <div className="flex items-start">
-        {/* Current theme button - now using items-start instead of items-center */}
+        {/* Current theme button */}
         <div className="bg-primary rounded-md p-1 mr-3">
           <div className="flex items-center p-1 text-text">{currentThemeObject.icon}</div>
         </div>
@@ -75,28 +90,49 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className = "" }) 
             ))}
           </div>
 
-          {/* Pagination dots centered under the theme options */}
+          {/* Pagination with navigation and high-contrast dots */}
           {totalPages > 1 && (
-            <div className="mt-2 flex justify-center space-x-2">
-              {Array.from({ length: totalPages }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToPage(index)}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    currentPage === index
-                      ? "bg-primary-light scale-110 cursor-default"
-                      : "bg-text-tertiary hover:bg-text-secondary cursor-pointer"
-                  }`}
-                  aria-label={`Go to page ${index + 1}`}
-                  title={currentPage === index ? "Current page" : `Go to page ${index + 1}`}
-                  disabled={currentPage === index}
-                />
-              ))}
+            <div className="mt-2 flex justify-center items-center space-x-2">
+              {/* Previous button */}
+              <button
+                onClick={prevPage}
+                disabled={currentPage === 0}
+                className="text-primary disabled:opacity-30 hover:text-primary-light p-1"
+                title="Previous page"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              
+              {/* Pagination dots with border for contrast */}
+              <div className="flex space-x-2">
+                {Array.from({ length: totalPages }).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToPage(index)}
+                    className={`w-3 h-3 rounded-full transition-all border ${
+                      currentPage === index
+                        ? "bg-primary border-primary-light"
+                        : "bg-background-tertiary border-primary hover:bg-surface-hover"
+                    }`}
+                    aria-label={`Go to page ${index + 1}`}
+                    title={`Page ${index + 1} of ${totalPages}`}
+                  />
+                ))}
+              </div>
+              
+              {/* Next button */}
+              <button
+                onClick={nextPage}
+                disabled={currentPage === totalPages - 1}
+                className="text-primary disabled:opacity-30 hover:text-primary-light p-1"
+                title="Next page"
+              >
+                <ChevronRight size={14} />
+              </button>
             </div>
           )}
         </div>
       </div>
     </div>
-  )
+  ) : null
 }
-
