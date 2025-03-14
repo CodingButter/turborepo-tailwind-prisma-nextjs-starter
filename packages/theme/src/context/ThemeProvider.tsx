@@ -1,11 +1,11 @@
+// packages/theme/src/context/ThemeProvider.tsx with fixes
+
 'use client'
-import React, { useEffect, ReactNode } from "react"
-import { ThemeContext,ThemeMode,ThemeContextValue } from "../hooks/useTheme"
+import React, { useEffect, ReactNode , useState} from "react"
+import { ThemeContext, ThemeMode } from "../hooks/useTheme"
 import "@/global.css"
 import { Sun, Moon, Palette } from "lucide-react"
-import { useStorage } from "@repo/storage"
-
-
+import { useStorage } from "@repo/storage"  
 
 export const themes: { value: ThemeMode; label: string; icon?: React.ReactNode }[] = [
   { value: "light", label: "Light", icon: <Sun size={16} /> },
@@ -32,8 +32,8 @@ export const themes: { value: ThemeMode; label: string; icon?: React.ReactNode }
   },
 ]
 
-
 const classList = themes.map((t) => `theme-${t.value}`).join(" ")
+
 interface ThemeProviderProps {
   children: ReactNode
   defaultTheme?: ThemeMode
@@ -43,17 +43,34 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   defaultTheme = "dark",
 }) => {
-  // Get saved theme from localStorage or use default
-  const [theme, setTheme] = useStorage<ThemeMode>("theme", defaultTheme)
-  // Apply the theme CSS variables
+  // Use a regular useState hook to prevent hydration issues
+  const [theme, setThemeState] = useStorage<ThemeMode>(defaultTheme)
+   const [initialized, setInitialized] = useState(false)
+
+  // Apply the theme CSS classes
   useEffect(() => {
-    // Remove previous theme classes
-    document.documentElement.classList.remove(...classList.split(" "))
+    if (!initialized) {
+      setInitialized(true)
+    }
+    else {
+      // Remove previous theme classes
+      document.documentElement.classList.remove(...classList.split(" "))
+      // Add current theme class
+      document.documentElement.classList.add(`theme-${theme}`)
+    }
+  }, [theme,initialized])
 
-    // Add current theme class
-    document.documentElement.classList.add(`theme-${theme}`)
-  }, [theme])
+  // Wrap the setTheme function
+  const setTheme = (newTheme: ThemeMode) => {
+    if (themes.some((t) => t.value === newTheme)) {
+      setThemeState(newTheme)
+    }
+  }
 
-
-  return <ThemeContext.Provider value={{ theme, setTheme}}>{children}</ThemeContext.Provider>
+  // Provide the context value
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  )
 }
