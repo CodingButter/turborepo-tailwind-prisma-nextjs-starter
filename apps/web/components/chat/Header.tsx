@@ -1,14 +1,16 @@
-import React from "react"
-import ThemeSwitcher from "../ThemeSwitcher"
-import { Link } from "react-router-dom"
-import { Home, Menu, ChevronsLeft, Hash } from "lucide-react"
+'use client';
+
+import React from "react";
+import Link from "next/link";
+import { Menu, ChevronsLeft, Hash, Home } from "lucide-react";
+import { ThemeSwitcher } from "@repo/theme";
 
 interface HeaderProps {
-  isConnected: boolean
-  connectionStatus: string
-  currentChannel: `#${string}` | null
-  onToggleSidebar: () => void
-  sidebarCollapsed: boolean
+  isConnected: boolean;
+  connectionStatus: string;
+  currentChannel: `#${string}` | null;
+  onToggleSidebar: () => void;
+  sidebarCollapsed: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -30,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             {sidebarCollapsed ? <Menu size={24} /> : <ChevronsLeft size={24} />}
           </button>
-          <Link to="/" className="text-text hover:text-primary transition-colors" title="Home">
+          <Link href="/" className="text-text hover:text-primary transition-colors" title="Home">
             <Home size={24} />
           </Link>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -50,25 +52,25 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
-  )
+  );
 
   const ChannelHeader = () => {
-    if (!currentChannel) return null
+    if (!currentChannel) return null;
 
     return (
       <div className="bg-background-secondary p-4 border-b border-border flex items-center">
         <Hash size={18} className="text-primary mr-2" />
         <h2 className="text-xl font-bold">{currentChannel.substring(1)}</h2>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <>
       <AppHeader />
       {currentChannel && <ChannelHeader />}
     </>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

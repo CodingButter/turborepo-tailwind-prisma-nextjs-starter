@@ -1,3 +1,4 @@
+'use client';
 const BTTV_API_BASE = "https://api.betterttv.net/3/cached";
 const FFZ_API_BASE = "https://api.frankerfacez.com/v1";
 const TWITCH_API = "https://api.twitch.tv/helix";

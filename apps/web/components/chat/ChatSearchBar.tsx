@@ -1,53 +1,55 @@
-import React, { useState, useEffect } from "react"
-import { Search, X, Filter } from "lucide-react"
+'use client';
+
+import React, { useState, useEffect } from "react";
+import { Search, X, Filter } from "lucide-react";
 
 export interface ChatFilters {
-  showJoinLeave: boolean
-  showTimestamps: boolean
-  highlightMentions: boolean
-  onlyFromUser: string | null
+  showJoinLeave: boolean;
+  showTimestamps: boolean;
+  highlightMentions: boolean;
+  onlyFromUser: string | null;
 }
 
 interface ChatSearchBarProps {
-  onSearch: (query: string) => void
-  onFilterChange: (filters: ChatFilters) => void
+  onSearch: (query: string) => void;
+  onFilterChange: (filters: ChatFilters) => void;
 }
 
 const ChatSearchBar: React.FC<ChatSearchBarProps> = ({ onSearch, onFilterChange }) => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showFilters, setShowFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<ChatFilters>({
     showJoinLeave: true,
     showTimestamps: true,
     highlightMentions: true,
     onlyFromUser: null,
-  })
+  });
 
   // Update search when query changes
   useEffect(() => {
     const delaySearch = setTimeout(() => {
-      onSearch(searchQuery)
-    }, 300)
+      onSearch(searchQuery);
+    }, 300);
 
-    return () => clearTimeout(delaySearch)
-  }, [searchQuery, onSearch])
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery, onSearch]);
 
   // Update filters when they change
   useEffect(() => {
-    onFilterChange(filters)
-  }, [filters, onFilterChange])
+    onFilterChange(filters);
+  }, [filters, onFilterChange]);
 
   const handleClearSearch = () => {
-    setSearchQuery("")
-    onSearch("")
-  }
+    setSearchQuery("");
+    onSearch("");
+  };
 
   const updateFilter = (key: keyof ChatFilters, value: any) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="bg-surface border-b border-border p-2">
@@ -136,7 +138,7 @@ const ChatSearchBar: React.FC<ChatSearchBarProps> = ({ onSearch, onFilterChange 
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default ChatSearchBar
+export default ChatSearchBar;
