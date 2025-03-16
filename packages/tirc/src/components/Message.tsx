@@ -1,5 +1,5 @@
 import React from "react";
-import { IMessage } from "../context/TIRCClientProvider";
+import { IMessage } from "../hooks/useTIRC"; // Fixed: Import from hooks/useTIRC instead of context
 
 /**
  * Props for the Message component.

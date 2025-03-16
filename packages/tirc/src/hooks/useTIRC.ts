@@ -3,6 +3,10 @@
 import { useContext, createContext } from "react";
 import { TIRCClient } from "../lib/TIRCClient";
 import { IEmote } from "../";
+
+// Define Channel type to match what's used in TIRCClient
+export type Channel = `#${string}`;
+
 /**
  * Defines the structure of a chat message.
  */
@@ -18,13 +22,14 @@ export interface IMessage {
 
 export interface TIRCContextType {
   client: TIRCClient | null;
-  sendMessage: (channel: `#${string}`, message: string) => void;
+  sendMessage: (channel: Channel, message: string) => void;
   messages: IMessage[];
   clientId: string;
   oauthToken?: string;
 }
 
 export const TIRCContext = createContext<TIRCContextType | null>(null);
+
 export const useTIRC = () => {
   const context = useContext(TIRCContext);
 

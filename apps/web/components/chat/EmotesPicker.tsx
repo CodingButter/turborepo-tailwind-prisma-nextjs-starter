@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { X, Search, RefreshCw } from "lucide-react"
-import { useEmotes } from "@repo/tirc"
+import { useEmotes, Channel } from "@repo/tirc" // Import Channel type from tirc
 import { useStorage } from "@repo/storage"
 import Image from "next/image"
 import { IEmote } from "@repo/tirc"
@@ -8,7 +8,7 @@ import { IEmote } from "@repo/tirc"
 interface EmotesPickerProps {
   onClose: () => void
   onSelectEmote: (emoteCode: string) => void
-  channelName: string | null
+  channelName: Channel | null // Use the proper Channel type
 }
 
 const EmotesPicker: React.FC<EmotesPickerProps> = ({ onClose, onSelectEmote, channelName }) => {

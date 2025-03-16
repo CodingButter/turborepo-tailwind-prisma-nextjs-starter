@@ -1,5 +1,8 @@
 import { EventEmitter } from "./EventEmitter";
 
+// Define Channel type explicitly for consistent use
+export type Channel = `#${string}`;
+
 /**
  * Defines the structure of the IRC Client configuration.
  */
@@ -8,8 +11,8 @@ export interface ITIRCClientConfig {
   oauthToken: string;
   clientId: string;
   nick: string;
-  channels: `#${string}`[];
-  reconnect?: boolean; // Optional auto-reconnect
+  channels: Channel[];  // Using Channel type here
+  reconnect?: boolean;
 }
 
 /**
@@ -21,9 +24,9 @@ export type TIRCEvents = {
   userLeft: { user: string; channel: string };
   error: { message: string };
   disconnected: { reason?: string };
-  connected: { timestamp: number }; // Changed from empty object to add a timestamp
-  joined: string; // Added to represent a joined channel
-  left: string; // Added to represent a left channel
+  connected: { timestamp: number };
+  joined: Channel;  // Using Channel type here
+  left: Channel;    // Using Channel type here
 };
 
 /**
@@ -39,6 +42,16 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
   constructor(config: ITIRCClientConfig) {
     super();
     this.config = config;
+  }
+
+  /**
+   * Ensures a string is a valid Channel type
+   */
+  private ensureChannel(value: string): Channel {
+    if (!value.startsWith('#')) {
+      return `#${value}` as Channel;
+    }
+    return value as Channel;
   }
 
   /**
@@ -121,7 +134,7 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
    * @param channel - The channel to send the message to.
    * @param message - The message content.
    */
-  sendMessage(channel: `#${string}`, message: string): void {
+  sendMessage(channel: Channel, message: string): void {
     if (this.socket && this.isConnected) {
       this.socket.send(`PRIVMSG ${channel} :${message}`);
     } else {
@@ -180,10 +193,10 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
 
       const messageMatch = messageWithoutTags.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG (#\w+) :(.*)/);
       if (messageMatch) {
-        const [, user, channel, message] = messageMatch;
+        const [, user, channelStr, message] = messageMatch;
         // Check that all required values are defined
-        if (user && channel && message) {
-          this.emit("messageReceived", { user, message, channel, tags });
+        if (user && channelStr && message) {
+          this.emit("messageReceived", { user, message, channel: channelStr, tags });
         }
         continue;
       }
@@ -191,12 +204,14 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
       // JOIN messages
       const joinMatch = messageWithoutTags.match(/:(\w+)!.*JOIN (#\w+)/);
       if (joinMatch) {
-        const [, user, channel] = joinMatch;
-        if (user && channel) {
-          this.emit("userJoined", { user, channel });
+        const [, user, channelStr] = joinMatch;
+        if (user && channelStr) {
+          this.emit("userJoined", { user, channel: channelStr });
           
           // If the user is us, emit joined event for the channel
           if (user.toLowerCase() === this.config.nick.toLowerCase()) {
+            // Ensure valid Channel type before emitting
+            const channel = this.ensureChannel(channelStr);
             this.emit("joined", channel);
           }
         }
@@ -206,12 +221,14 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
       // PART messages
       const partMatch = messageWithoutTags.match(/:(\w+)!.*PART (#\w+)/);
       if (partMatch) {
-        const [, user, channel] = partMatch;
-        if (user && channel) {
-          this.emit("userLeft", { user, channel });
+        const [, user, channelStr] = partMatch;
+        if (user && channelStr) {
+          this.emit("userLeft", { user, channel: channelStr });
           
           // If the user is us, emit left event for the channel
           if (user.toLowerCase() === this.config.nick.toLowerCase()) {
+            // Ensure valid Channel type before emitting
+            const channel = this.ensureChannel(channelStr);
             this.emit("left", channel);
           }
         }

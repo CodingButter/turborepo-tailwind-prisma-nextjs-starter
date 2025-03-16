@@ -52,12 +52,6 @@ interface SimpleTircClient {
   getNick?: () => string;
 }
 
-// Type guard for checking if a string is a valid channel
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function isChannel(value: string | null | undefined): value is Channel {
-  return typeof value === 'string' && value.startsWith('#');
-}
-
 // Force a string to be a valid channel
 function asChannel(value: string): Channel {
   if (!value.startsWith('#')) {
@@ -320,18 +314,21 @@ const ChatInterface: React.FC = () => {
     if (!tircClient) return;
 
     const handleJoined = (channelName: string) => {
-      // Convert to proper channel type
-      const channel = asChannel(channelName);
+      // Skip if channelName is invalid
+      if (!channelName || typeof channelName !== 'string') return;
       
-      console.log(`Chat interface noticed channel joined: ${channel}`);
+      // Explicitly create a Channel type - FIX for line 200
+      const validChannel: Channel = asChannel(channelName);
+      
+      console.log(`Chat interface noticed channel joined: ${validChannel}`);
       
       setChannels((prev) => {
-        if (!prev.includes(channel)) {
-          const newChannels = [...prev, channel];
+        if (!prev.includes(validChannel)) {
+          const newChannels = [...prev, validChannel];
           // If this is the first channel, set it as current
           if (newChannels.length === 1 || !currentChannel) {
-            console.log(`Setting current channel to: ${channel}`);
-            setCurrentChannel(channel);
+            console.log(`Setting current channel to: ${validChannel}`);
+            setCurrentChannel(validChannel);
           }
 
           // Save to localStorage
@@ -344,10 +341,10 @@ const ChatInterface: React.FC = () => {
       // Add system message about joining
       const joinMessage: Message = {
         id: generateUniqueId(),
-        channel,
+        channel: validChannel,
         username: "system",
         displayName: "System",
-        content: `Joined channel ${channel}`,
+        content: `Joined channel ${validChannel}`,
         color: "var(--color-success)",
         timestamp: new Date(),
         isCurrentUser: false,
@@ -357,35 +354,42 @@ const ChatInterface: React.FC = () => {
     };
 
     const handleLeft = (channelName: string) => {
-      // Convert to proper channel type
-      const channel = asChannel(channelName);
+      // Skip if channelName is invalid
+      if (!channelName || typeof channelName !== 'string') return;
+      
+      // Explicitly create a Channel type
+      const validChannel: Channel = asChannel(channelName);
+      
+      // Make a copy of channels for use in the callback
+      const currentChannelsCopy = [...channels];
       
       setChannels((prev) => {
-        const updatedChannels = prev.filter((ch) => ch !== channel);
+        const updatedChannels = prev.filter((ch) => ch !== validChannel);
         // Save to localStorage
         saveChannelsToLocalStorage(updatedChannels);
         return updatedChannels;
       });
 
-      // Fixed: Make sure we never return undefined
-      setCurrentChannel((current: Channel | null) => {
-        if (current === channel) {
-          // Get remaining channels
-          const remainingChannels = channels.filter((ch) => ch !== channel);
-          // Return first channel if available, null otherwise
+      // FIX for line 374 - ensure the callback never returns undefined
+      setCurrentChannel((current) => {
+        // If the current channel is the one being left, find another
+        if (current === validChannel) {
+          // Get channels that will remain
+          const remainingChannels = currentChannelsCopy.filter(ch => ch !== validChannel);
+          // Return either the first remaining channel or null (never undefined)
           return remainingChannels.length > 0 ? remainingChannels[0] : null;
         }
-        // No change needed
+        // Otherwise, keep the current channel
         return current;
       });
 
       // Add system message about leaving
       const leaveMessage: Message = {
         id: generateUniqueId(),
-        channel,
+        channel: validChannel,
         username: "system",
         displayName: "System",
-        content: `Left channel ${channel}`,
+        content: `Left channel ${validChannel}`,
         color: "var(--color-error)",
         timestamp: new Date(),
         isCurrentUser: false,
@@ -406,12 +410,13 @@ const ChatInterface: React.FC = () => {
 
   // Send message function
   const sendMessage = (content: string = messageInput) => {
+    // Early return if no content, no channel, or no client
     if (!content.trim() || !currentChannel || !tircClient) return;
 
     console.log(`Attempting to send message to ${currentChannel}: ${content}`);
 
     try {
-      // Use TIRC's sendMessage
+      // FIX for line 516 - currentChannel is guaranteed to be valid and non-null here
       tircSendMessage(currentChannel, content);
 
       // Add self message to the UI
@@ -455,19 +460,21 @@ const ChatInterface: React.FC = () => {
 
   // Join a new channel
   const joinChannel = () => {
+    // Early return if requirements not met
     if (!newChannelInput.trim() || !isConnected || !tircClient) return;
 
-    // Ensure the channel has the correct format
-    const channel = asChannel(newChannelInput);
+    // FIX for line 535 - Create a properly typed channel
+    const channelToJoin: Channel = asChannel(newChannelInput);
 
     try {
-      joinChannelSafely(channel);
+      // Use the validated channel
+      joinChannelSafely(channelToJoin);
       setNewChannelInput("");
     } catch (error) {
       console.error("Failed to join channel:", error);
 
-      // Add error message - ensure we have a valid channel or fallback
-      const systemChannel = currentChannel || "#system";
+      // Use a literal to ensure we have a valid Channel for system messages
+      const systemChannel: Channel = currentChannel || "#system";
       const errorMessage: Message = {
         id: generateUniqueId(),
         channel: systemChannel,
@@ -642,4 +649,4 @@ const ChatInterface: React.FC = () => {
   );
 };
 
-export default ChatInterface;
+export default ChatInterface; 

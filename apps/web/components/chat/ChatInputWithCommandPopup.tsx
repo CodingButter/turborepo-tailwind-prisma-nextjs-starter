@@ -2,10 +2,21 @@
 import React, { useState, useRef, useEffect } from "react"
 import { Send, Command, Smile } from "lucide-react"
 import EmotesPicker from "./EmotesPicker"
+import { Channel } from "@repo/tirc" // Import the Channel type from tirc
+
+// Extend Window interface to include ircClient for debug purposes
+interface CustomWindow extends Window {
+  ircClient?: {
+    sendMessage: (channel: Channel, message: string) => void;
+  }
+}
+
+// Use the extended window type
+declare const window: CustomWindow;
 
 interface ChatInputWithCommandPopupProps {
-  channelName?: string | null
-  onSendMessage?: (message: string) => void
+  channelName: Channel | null; // Use Channel type from tirc
+  onSendMessage?: (message: string) => void;
 }
 
 // Common Twitch chat commands
@@ -76,10 +87,10 @@ const ChatInputWithCommandPopup: React.FC<ChatInputWithCommandPopupProps> = ({
         // Call the parent handler if provided, otherwise use IRC client directly
         if (onSendMessage) {
           onSendMessage(message)
-        } else {
+        } else if (channelName) {
           // Use the global IRC client from window (added by the debug utility)
-          const client = (window as any).ircClient
-          if (client && channelName) {
+          const client = window.ircClient
+          if (client) {
             try {
               client.sendMessage(channelName, message)
               console.log(`Sent message to ${channelName}: ${message}`)
@@ -189,7 +200,7 @@ const ChatInputWithCommandPopup: React.FC<ChatInputWithCommandPopupProps> = ({
             <EmotesPicker
               onClose={() => setShowEmotes(false)}
               onSelectEmote={handleEmoteSelect}
-              channelName={channelName || null}
+              channelName={channelName}
             />
           )}
         </div>

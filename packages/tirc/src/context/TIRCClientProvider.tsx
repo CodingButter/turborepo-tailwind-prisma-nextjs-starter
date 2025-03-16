@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { TIRCClient, ITIRCClientConfig } from "../lib/TIRCClient";
-import { IMessage, TIRCContext } from "../hooks/useTIRC";
+import { IMessage, TIRCContext, Channel } from "../hooks/useTIRC";
 import { IEmote } from "../utils/emoteUtils";
 
 // Helper functions to replace missing imports
@@ -22,6 +22,14 @@ const extractEmotesFromMessage = (message: string, emotes: IEmote[]): IEmote[] =
   if (!message || !emotes.length) return [];
   return emotes.filter((emote) => message.includes(emote.name));
 };
+
+// Helper to ensure a string is a valid Channel
+export function ensureChannel(value: string): Channel {
+  if (!value.startsWith('#')) {
+    return `#${value}` as Channel;
+  }
+  return value as Channel;
+}
 
 export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children: React.ReactNode }> = ({
   config,
@@ -65,9 +73,13 @@ export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children:
 
   /**
    * Sends a chat message.
+   * Ensures channel is properly typed as Channel before sending
    */
-  const sendMessage = (channel: `#${string}`, message: string) => {
-    clientRef.current?.sendMessage(channel, message);
+  const sendMessage = (channel: Channel, message: string) => {
+    if (!clientRef.current) return;
+    
+    // We know channel is already properly typed as Channel here
+    clientRef.current.sendMessage(channel, message);
   };
 
   return (
