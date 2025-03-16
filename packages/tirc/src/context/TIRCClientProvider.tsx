@@ -2,9 +2,26 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { TIRCClient, ITIRCClientConfig } from "../lib/TIRCClient";
-import { formatMessageWithEmotes, extractEmotesFromMessage } from "../utils/emoteUtils";
 import { IMessage, TIRCContext } from "../hooks/useTIRC";
+import { IEmote } from "../utils/emoteUtils";
 
+// Helper functions to replace missing imports
+const formatMessageWithEmotes = (message: string, emotes: IEmote[]): string => {
+  if (!message || !emotes.length) return message;
+  
+  return emotes.reduce((formattedMessage, emote) => {
+    const regex = new RegExp(`\\b${emote.name}\\b`, 'g');
+    return formattedMessage.replace(
+      regex,
+      `<img src="${emote.urls["1x"] || ""}" class="message-emote" data-name="${emote.name}" />`
+    );
+  }, message);
+};
+
+const extractEmotesFromMessage = (message: string, emotes: IEmote[]): IEmote[] => {
+  if (!message || !emotes.length) return [];
+  return emotes.filter((emote) => message.includes(emote.name));
+};
 
 export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children: React.ReactNode }> = ({
   config,
@@ -27,7 +44,7 @@ export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children:
     ircClient.connect().catch((err) => console.error("Error connecting to Twitch IRC:", err));
 
     // Listen for incoming chat messages
-    ircClient.on("messageReceived", ({ user, message, channel }) => {
+    ircClient.on("messageReceived", ({ user, message, channel, tags }) => {
       const formattedMessage = formatMessageWithEmotes(message, []); // Placeholder for emotes
       const newMessage: IMessage = {
         id: `${Date.now()}-${Math.random()}`, // Unique ID
@@ -36,6 +53,7 @@ export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children:
         rawMessage: message,
         formattedMessage,
         emotes: extractEmotesFromMessage(message, []), // Placeholder for emote processing
+        tags,
       };
       setMessages((prev) => [...prev, newMessage]);
     });
@@ -53,7 +71,13 @@ export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children:
   };
 
   return (
-    <TIRCContext.Provider value={{ client, sendMessage, messages, clientId: config.clientId }}>
+    <TIRCContext.Provider value={{ 
+      client, 
+      sendMessage, 
+      messages, 
+      clientId: config.clientId,
+      oauthToken: config.oauthToken
+    }}>
       {children}
     </TIRCContext.Provider>
   );

@@ -6,7 +6,7 @@ import { EventEmitter } from "./EventEmitter";
 export interface ITIRCClientConfig {
   server: string;
   oauthToken: string;
-  clientId: string; // 🔥 Add clientId here
+  clientId: string;
   nick: string;
   channels: `#${string}`[];
   reconnect?: boolean; // Optional auto-reconnect
@@ -16,7 +16,7 @@ export interface ITIRCClientConfig {
  * Defines the events that the IRC client will emit.
  */
 export type TIRCEvents = {
-  messageReceived: { user: string; message: string; channel: string };
+  messageReceived: { user: string; message: string; channel: string; tags?: Record<string, string> };
   userJoined: { user: string; channel: string };
   userLeft: { user: string; channel: string };
   error: { message: string };
@@ -91,6 +91,30 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
   }
 
   /**
+   * Gets the Twitch OAuth token.
+   * @returns The Twitch OAuth token without 'oauth:' prefix.
+   */
+  getOAuthToken(): string {
+    return this.config.oauthToken || "";
+  }
+
+  /**
+   * Gets the Client ID.
+   * @returns The Twitch client ID.
+   */
+  getClientId(): string {
+    return this.config.clientId || "";
+  }
+
+  /**
+   * Gets the nickname used for the connection.
+   * @returns The user's nickname.
+   */
+  getNick(): string {
+    return this.config.nick;
+  }
+
+  /**
    * Sends a message to the chat.
    * @param channel - The channel to send the message to.
    * @param message - The message content.
@@ -134,10 +158,28 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
         continue;
       }
 
-      const messageMatch = line.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG (#\w+) :(.*)/);
+      // Parse tags if present
+      const tags: Record<string, string> = {};
+      let messageWithoutTags = line;
+      
+      if (line.startsWith('@')) {
+        const tagsEnd = line.indexOf(' ');
+        const tagsString = line.substring(1, tagsEnd);
+        messageWithoutTags = line.substring(tagsEnd + 1);
+        
+        // Parse tags into an object
+        tagsString.split(';').forEach(tag => {
+          const [key, value] = tag.split('=');
+          if (key && value !== undefined) {
+            tags[key] = value;
+          }
+        });
+      }
+
+      const messageMatch = messageWithoutTags.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG (#\w+) :(.*)/);
       if (messageMatch) {
         const [, user, channel, message] = messageMatch;
-        this.emit("messageReceived", { user, message, channel });
+        this.emit("messageReceived", { user, message, channel, tags });
         continue;
       }
 
