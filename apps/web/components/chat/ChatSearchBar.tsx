@@ -44,7 +44,7 @@ const ChatSearchBar: React.FC<ChatSearchBarProps> = ({ onSearch, onFilterChange 
     onSearch("");
   };
 
-  const updateFilter = (key: keyof ChatFilters, value: any) => {
+  const updateFilter = (key: keyof ChatFilters, value: boolean | string | null) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,

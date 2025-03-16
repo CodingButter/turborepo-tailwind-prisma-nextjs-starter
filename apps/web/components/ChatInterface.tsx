@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTIRC, useEmotes } from "@repo/tirc";
+import { Channel, Message as TIRCMessage } from "@repo/tirc/typings"; // Import types from TIRC
 import { useSearchParams } from "next/navigation";
 import { useSidebarState } from "../hooks/useSidebarState";
 
@@ -16,14 +17,20 @@ import { Message } from "../types/Message";
 // Extract the component from the module if it's not a default export
 const MessageList = MessageListModule.default || MessageListModule.MessageList;
 
-// Define Channel type
-type Channel = `#${string}`;
+// Type for the events in TIRC client
+interface TIRCEvent {
+  channel: string;
+  user: string;
+  message?: string;
+  timestamp?: number;
+  reason?: string;
+}
 
 // Simplified TIRC client interface - only include what we need
 interface SimpleTircClient {
   sendMessage: (channel: Channel, message: string) => void;
-  on: (event: string, callback: (data: any) => void) => void;
-  off: (event: string, callback: (data: any) => void) => void;
+  on: (event: string, callback: (data: TIRCEvent) => void) => void;
+  off: (event: string, callback: (data: TIRCEvent) => void) => void;
   getNick?: () => string;
 }
 
@@ -119,7 +126,7 @@ const ChatInterface: React.FC = () => {
       isCurrentUser: false,
       badges: "",
       profileImage: null,
-      tags: (latestMessage as any).tags || {}, // Type assertion for tags
+      tags: (latestMessage as TIRCMessage).tags || {}, // Use TIRCMessage type
     };
     
     setMessages(prev => [...prev, newMessage]);
@@ -240,7 +247,7 @@ const ChatInterface: React.FC = () => {
       setConnectionStatus(`Error: ${error.message}`);
     };
 
-    const handleUserJoined = (data: { channel: string, user: string }) => {
+    const handleUserJoined = (data: TIRCEvent) => {
       // Add system message for user join
       const joinMessage: Message = {
         id: generateUniqueId(),
@@ -256,7 +263,7 @@ const ChatInterface: React.FC = () => {
       setMessages(prev => [...prev, joinMessage]);
     };
 
-    const handleUserLeft = (data: { channel: string, user: string }) => {
+    const handleUserLeft = (data: TIRCEvent) => {
       // Add system message for user leave
       const leftMessage: Message = {
         id: generateUniqueId(),
@@ -273,12 +280,12 @@ const ChatInterface: React.FC = () => {
     };
 
     // Helper function for safe event registration
-    const safeOn = (event: string, handler: (data: any) => void) => {
+    const safeOn = (event: string, handler: (data: TIRCEvent) => void) => {
       tircClient.on(event, handler);
     };
 
     // Helper function for safe event deregistration
-    const safeOff = (event: string, handler: (data: any) => void) => {
+    const safeOff = (event: string, handler: (data: TIRCEvent) => void) => {
       tircClient.off(event, handler);
     };
 
@@ -350,7 +357,7 @@ const ChatInterface: React.FC = () => {
         return updatedChannels;
       });
 
-      // CRITICAL FIX: Make sure we never return undefined
+      // Fixed: Make sure we never return undefined
       setCurrentChannel((current) => {
         if (current === channel) {
           // Get remaining channels
@@ -378,12 +385,12 @@ const ChatInterface: React.FC = () => {
     };
 
     // Helper functions for safe event registration
-    const safeOn = (event: string, handler: (data: any) => void) => {
-      tircClient.on(event, handler);
+    const safeOn = (event: string, handler: (data: string) => void) => {
+      tircClient.on(event, handler as any);
     };
 
-    const safeOff = (event: string, handler: (data: any) => void) => {
-      tircClient.off(event, handler);
+    const safeOff = (event: string, handler: (data: string) => void) => {
+      tircClient.off(event, handler as any);
     };
 
     // Add event listeners using our safe wrapper
