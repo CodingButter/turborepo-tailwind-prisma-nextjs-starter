@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTIRC, useEmotes } from "@repo/tirc";
-import { Channel, Message as TIRCMessage } from "@repo/tirc/typings"; // Import types from TIRC
 import { useSearchParams } from "next/navigation";
 import { useSidebarState } from "../hooks/useSidebarState";
 
-// Import components correctly (not using default imports if they don't exist)
+// Import components correctly
 import * as MessageListModule from "./chat/MessageList";
 import ChannelList from "./chat/ChannelList";
 import Header from "./chat/Header";
@@ -17,24 +16,44 @@ import { Message } from "../types/Message";
 // Extract the component from the module if it's not a default export
 const MessageList = MessageListModule.default || MessageListModule.MessageList;
 
-// Type for the events in TIRC client
-interface TIRCEvent {
-  channel: string;
+// Define Channel type that matches the one used in TIRC
+type Channel = `#${string}`;
+
+// Extended interface for TIRC messages
+interface TIRCMessage {
+  id: string;
   user: string;
-  message?: string;
-  timestamp?: number;
-  reason?: string;
+  channel: string;
+  rawMessage: string;
+  formattedMessage: string;
+  tags?: Record<string, string>;
 }
 
-// Simplified TIRC client interface - only include what we need
+// Define specific event handler types
+type ConnectHandler = () => void;
+type DisconnectHandler = () => void;
+type ErrorHandler = (data: { message: string }) => void;
+type UserEventHandler = (data: { user: string; channel: string }) => void;
+type ChannelEventHandler = (channelName: string) => void;
+
+// Simplified TIRC client interface with specific handler types
 interface SimpleTircClient {
   sendMessage: (channel: Channel, message: string) => void;
-  on: (event: string, callback: (data: TIRCEvent) => void) => void;
-  off: (event: string, callback: (data: TIRCEvent) => void) => void;
+  on(event: "connected", callback: ConnectHandler): void;
+  on(event: "disconnected", callback: DisconnectHandler): void;
+  on(event: "error", callback: ErrorHandler): void;
+  on(event: "userJoined" | "userLeft", callback: UserEventHandler): void;
+  on(event: "joined" | "left", callback: ChannelEventHandler): void;
+  off(event: "connected", callback: ConnectHandler): void;
+  off(event: "disconnected", callback: DisconnectHandler): void;
+  off(event: "error", callback: ErrorHandler): void;
+  off(event: "userJoined" | "userLeft", callback: UserEventHandler): void;
+  off(event: "joined" | "left", callback: ChannelEventHandler): void;
   getNick?: () => string;
 }
 
 // Type guard for checking if a string is a valid channel
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isChannel(value: string | null | undefined): value is Channel {
   return typeof value === 'string' && value.startsWith('#');
 }
@@ -111,7 +130,7 @@ const ChatInterface: React.FC = () => {
     if (!tircMessages || tircMessages.length === 0) return;
     
     // Get the most recent message with proper null checking
-    const latestMessage = tircMessages[tircMessages.length - 1];
+    const latestMessage = tircMessages[tircMessages.length - 1] as TIRCMessage;
     if (!latestMessage) return;
     
     // Convert to our app's message format
@@ -126,7 +145,7 @@ const ChatInterface: React.FC = () => {
       isCurrentUser: false,
       badges: "",
       profileImage: null,
-      tags: (latestMessage as TIRCMessage).tags || {}, // Use TIRCMessage type
+      tags: latestMessage.tags || {}, // Use tags if available
     };
     
     setMessages(prev => [...prev, newMessage]);
@@ -243,11 +262,12 @@ const ChatInterface: React.FC = () => {
       setJoinAttemptInProgress(false);
     };
 
-    const handleError = (error: { message: string }) => {
-      setConnectionStatus(`Error: ${error.message}`);
+    // Type-safe error handler
+    const handleError = (data: { message: string }) => {
+      setConnectionStatus(`Error: ${data.message}`);
     };
 
-    const handleUserJoined = (data: TIRCEvent) => {
+    const handleUserJoined = (data: { user: string; channel: string }) => {
       // Add system message for user join
       const joinMessage: Message = {
         id: generateUniqueId(),
@@ -263,7 +283,7 @@ const ChatInterface: React.FC = () => {
       setMessages(prev => [...prev, joinMessage]);
     };
 
-    const handleUserLeft = (data: TIRCEvent) => {
+    const handleUserLeft = (data: { user: string; channel: string }) => {
       // Add system message for user leave
       const leftMessage: Message = {
         id: generateUniqueId(),
@@ -279,29 +299,19 @@ const ChatInterface: React.FC = () => {
       setMessages(prev => [...prev, leftMessage]);
     };
 
-    // Helper function for safe event registration
-    const safeOn = (event: string, handler: (data: TIRCEvent) => void) => {
-      tircClient.on(event, handler);
-    };
-
-    // Helper function for safe event deregistration
-    const safeOff = (event: string, handler: (data: TIRCEvent) => void) => {
-      tircClient.off(event, handler);
-    };
-
-    // Fix: Register event handlers with proper parameters
-    safeOn("connected", handleConnect);
-    safeOn("disconnected", handleDisconnect);
-    safeOn("error", handleError);
-    safeOn("userJoined", handleUserJoined);
-    safeOn("userLeft", handleUserLeft);
+    // Register event handlers properly
+    tircClient.on("connected", handleConnect);
+    tircClient.on("disconnected", handleDisconnect);
+    tircClient.on("error", handleError);
+    tircClient.on("userJoined", handleUserJoined);
+    tircClient.on("userLeft", handleUserLeft);
 
     return () => {
-      safeOff("connected", handleConnect);
-      safeOff("disconnected", handleDisconnect);
-      safeOff("error", handleError);
-      safeOff("userJoined", handleUserJoined);
-      safeOff("userLeft", handleUserLeft);
+      tircClient.off("connected", handleConnect);
+      tircClient.off("disconnected", handleDisconnect);
+      tircClient.off("error", handleError);
+      tircClient.off("userJoined", handleUserJoined);
+      tircClient.off("userLeft", handleUserLeft);
     };
   }, [tircClient]);
 
@@ -358,7 +368,7 @@ const ChatInterface: React.FC = () => {
       });
 
       // Fixed: Make sure we never return undefined
-      setCurrentChannel((current) => {
+      setCurrentChannel((current: Channel | null) => {
         if (current === channel) {
           // Get remaining channels
           const remainingChannels = channels.filter((ch) => ch !== channel);
@@ -384,23 +394,13 @@ const ChatInterface: React.FC = () => {
       setMessages((prev) => [...prev, leaveMessage]);
     };
 
-    // Helper functions for safe event registration
-    const safeOn = (event: string, handler: (data: string) => void) => {
-      tircClient.on(event, handler as any);
-    };
-
-    const safeOff = (event: string, handler: (data: string) => void) => {
-      tircClient.off(event, handler as any);
-    };
-
-    // Add event listeners using our safe wrapper
-    safeOn("joined", handleJoined);
-    safeOn("left", handleLeft);
+    // Type-safe event registration
+    tircClient.on("joined", handleJoined);
+    tircClient.on("left", handleLeft);
 
     return () => {
-      // Remove event listeners using our safe wrapper
-      safeOff("joined", handleJoined);
-      safeOff("left", handleLeft);
+      tircClient.off("joined", handleJoined);
+      tircClient.off("left", handleLeft);
     };
   }, [tircClient, channels, currentChannel, saveChannelsToLocalStorage]);
 
@@ -466,10 +466,11 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error("Failed to join channel:", error);
 
-      // Add error message
+      // Add error message - ensure we have a valid channel or fallback
+      const systemChannel = currentChannel || "#system";
       const errorMessage: Message = {
         id: generateUniqueId(),
-        channel: currentChannel || "#system",
+        channel: systemChannel,
         username: "system",
         displayName: "System",
         content: `Failed to join channel: ${
