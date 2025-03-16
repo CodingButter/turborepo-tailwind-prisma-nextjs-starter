@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { X, Search, AlertCircle, RefreshCw } from "lucide-react"
-import { useEmotes } from "../../hooks/useEmotes"
-import { useTwitchEmotes } from "../../hooks/useTwitchEmotes"
+import { useEmotes } from "@repo/tirc"
 
 interface EmotesPickerProps {
   onClose: () => void
