@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { X, Minimize, Maximize, ChevronUp, ChevronDown } from "lucide-react"
-import { parseEmotes, getTwitchEmoteUrl, splitMessageWithEmotes } from "../../utils/emoteUtils"
+import { parseEmotes, getTwitchEmoteUrl, splitMessageWithEmotes } from "@repo/tirc"
 
 interface Message {
   id: string
@@ -45,7 +45,7 @@ const UserMessagesPopup: React.FC<UserMessagesPopupProps> = ({ username, message
       )
     }
 
-    // Parse Twitch emotes
+    // Parse Twitch emotes using imported function from tirc
     const twEmotes = parseEmotes(message.tags?.emotes, message.content)
 
     // If no emotes, just return plain text
@@ -53,16 +53,16 @@ const UserMessagesPopup: React.FC<UserMessagesPopupProps> = ({ username, message
       return <span>{message.content}</span>
     }
 
-    // Split message into parts with emotes
+    // Split message into parts with emotes using imported function
     const messageParts = splitMessageWithEmotes(message.content, twEmotes)
 
     return (
       <p className="break-words flex flex-wrap items-center">
-        {messageParts.map((part: string | (typeof twEmotes)[0], index: number) => {
+        {messageParts.map((part, index) => {
           if (typeof part === "string") {
             return <span key={index}>{part}</span>
           } else {
-            // It's a Twitch emote
+            // It's a Twitch emote - using imported function
             return (
               <img
                 key={`${part.id}-${index}`}
