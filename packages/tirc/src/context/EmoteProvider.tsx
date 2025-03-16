@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import { fetchBTTVGlobalEmotes, fetchFFZGlobalEmotes, fetchTwitchEmotes, IEmote } from "../utils/emoteUtils";
 import { EmoteContext } from "../hooks/useEmotes";
 import { TIRCContext } from "../hooks/useTIRC";
@@ -14,16 +14,10 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clientId = tircContext?.clientId || "";
   const oauthToken = tircContext?.client?.getOAuthToken?.() || "";
 
-  useEffect(() => {
-    if (clientId && oauthToken) {
-      fetchEmotes();
-    }
-  }, [clientId, oauthToken]);
-
   /**
    * Fetches global and channel-specific emotes.
    */
-  const fetchEmotes = async () => {
+  const fetchEmotes = useCallback(async () => {
     setIsLoading(true);
     try {
       const bttvGlobal = await fetchBTTVGlobalEmotes();
@@ -48,7 +42,13 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, oauthToken]);
+
+  useEffect(() => {
+    if (clientId && oauthToken) {
+      fetchEmotes();
+    }
+  }, [clientId, oauthToken, fetchEmotes]);
 
   return (
     <EmoteContext.Provider value={{ emotes, isLoading, fetchEmotes }}>

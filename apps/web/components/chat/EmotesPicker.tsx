@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react"
-import { X, Search, AlertCircle, RefreshCw } from "lucide-react"
+import { X, Search, RefreshCw } from "lucide-react"
 import { useEmotes } from "@repo/tirc"
 import { useStorage } from "@repo/storage"
+import Image from "next/image"
+import { IEmote } from "@repo/tirc"
 
 interface EmotesPickerProps {
   onClose: () => void
@@ -88,7 +90,7 @@ const EmotesPicker: React.FC<EmotesPickerProps> = ({ onClose, onSelectEmote, cha
   }
 
   // Render emote grid
-  const renderEmoteGrid = (emoteList: any[], source: string) => {
+  const renderEmoteGrid = (emoteList: IEmote[], source: string) => {
     if (isLoading) {
       return (
         <div className="py-8 text-center text-text-secondary">
@@ -120,12 +122,16 @@ const EmotesPicker: React.FC<EmotesPickerProps> = ({ onClose, onSelectEmote, cha
             title={emote.name}
             type="button"
           >
-            <img
-              src={emote.urls["1x"] || ""}
-              alt={emote.name}
-              className="w-8 h-8 object-contain"
-              loading="lazy"
-            />
+            <div className="relative w-8 h-8">
+              <Image
+                src={emote.urls["1x"] || ""}
+                alt={emote.name}
+                fill
+                sizes="32px"
+                className="object-contain"
+                loading="lazy"
+              />
+            </div>
             <span className="text-xs mt-1 truncate w-full text-center">{emote.name}</span>
           </button>
         ))}
@@ -161,12 +167,16 @@ const EmotesPicker: React.FC<EmotesPickerProps> = ({ onClose, onSelectEmote, cha
               type="button"
             >
               {emote ? (
-                <img
-                  src={emote.urls["1x"] || ""}
-                  alt={emoteName}
-                  className="w-8 h-8 object-contain"
-                  loading="lazy"
-                />
+                <div className="relative w-8 h-8">
+                  <Image
+                    src={emote.urls["1x"] || ""}
+                    alt={emoteName}
+                    fill
+                    sizes="32px"
+                    className="object-contain"
+                    loading="lazy"
+                  />
+                </div>
               ) : (
                 <div className="w-8 h-8 flex items-center justify-center font-mono text-xs">
                   {emoteName}

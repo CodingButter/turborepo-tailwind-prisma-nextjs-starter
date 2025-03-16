@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { X, Minimize, Maximize, ChevronUp, ChevronDown } from "lucide-react"
 import { parseEmotes, getTwitchEmoteUrl, splitMessageWithEmotes } from "@repo/tirc"
+
+interface MessageTags {
+  emotes?: string;
+  [key: string]: string | undefined;
+}
 
 interface Message {
   id: string
@@ -8,7 +14,7 @@ interface Message {
   content: string
   timestamp: Date
   isAction?: boolean
-  tags?: any // Add tags to support emote parsing
+  tags?: MessageTags
 }
 
 interface UserMessagesPopupProps {
@@ -64,16 +70,17 @@ const UserMessagesPopup: React.FC<UserMessagesPopupProps> = ({ username, message
           } else {
             // It's a Twitch emote - using imported function
             return (
-              <img
-                key={`${part.id}-${index}`}
-                src={getTwitchEmoteUrl(part.id, "1.0")}
-                alt={part.code}
-                title={part.code}
-                className="inline-block mx-1 align-middle"
-                width="28"
-                height="28"
-                loading="lazy"
-              />
+              <div key={`${part.id}-${index}`} className="inline-block mx-1 align-middle relative w-7 h-7">
+                <Image
+                  src={getTwitchEmoteUrl(part.id, "1.0")}
+                  alt={part.code}
+                  title={part.code}
+                  width={28}
+                  height={28}
+                  loading="lazy"
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
             )
           }
         })}
@@ -85,8 +92,8 @@ const UserMessagesPopup: React.FC<UserMessagesPopupProps> = ({ username, message
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const clientId = import.meta.env.VITE_CLIENT_ID
-        const oauth = import.meta.env.VITE_OAUTH_TOKEN
+        const clientId = process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID
+        const oauth = process.env.NEXT_PUBLIC_TWITCH_OAUTH_TOKEN
 
         if (!clientId || !oauth) {
           console.error("Missing Client ID or OAuth token")
@@ -235,7 +242,9 @@ const UserMessagesPopup: React.FC<UserMessagesPopupProps> = ({ username, message
           <div
             className="w-full h-24 bg-gradient-to-r from-primary to-secondary opacity-70"
             style={{
-              backgroundImage: `url(https://static-cdn.jtvnw.net/jtv_user_pictures/${userData.userId}-channel_offline_background-1920x1080.png)`,
+              backgroundImage: userData.userId 
+                ? `url(https://static-cdn.jtvnw.net/jtv_user_pictures/${userData.userId}-channel_offline_background-1920x1080.png)` 
+                : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -245,11 +254,15 @@ const UserMessagesPopup: React.FC<UserMessagesPopupProps> = ({ username, message
         {/* Profile picture and username */}
         <div className="absolute bottom-0 left-4 transform translate-y-1/2 flex items-center">
           {userData.profileImage && (
-            <img
-              src={userData.profileImage}
-              alt={`${username}'s profile`}
-              className="w-20 h-20 rounded-full border-4 border-surface object-cover"
-            />
+            <div className="relative w-20 h-20">
+              <Image
+                src={userData.profileImage}
+                alt={`${username}'s profile`}
+                className="rounded-full border-4 border-surface object-cover"
+                fill
+                sizes="80px"
+              />
+            </div>
           )}
           <div className="ml-4">
             <h2 className="text-xl font-bold text-text">{userData.displayName || username}</h2>

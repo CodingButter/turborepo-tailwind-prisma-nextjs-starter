@@ -21,7 +21,9 @@ export type TIRCEvents = {
   userLeft: { user: string; channel: string };
   error: { message: string };
   disconnected: { reason?: string };
-  connected: {};
+  connected: { timestamp: number }; // Changed from empty object to add a timestamp
+  joined: string; // Added to represent a joined channel
+  left: string; // Added to represent a left channel
 };
 
 /**
@@ -64,11 +66,11 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
 
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        this.emit("connected", {});
+        this.emit("connected", { timestamp: Date.now() });
         resolve();
       };
 
-      this.socket.onerror = (event) => {
+      this.socket.onerror = () => {
         this.emit("error", { message: "WebSocket error occurred" });
         reject(new Error("WebSocket connection error"));
       };
@@ -179,23 +181,39 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
       const messageMatch = messageWithoutTags.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG (#\w+) :(.*)/);
       if (messageMatch) {
         const [, user, channel, message] = messageMatch;
-        this.emit("messageReceived", { user, message, channel, tags });
+        // Check that all required values are defined
+        if (user && channel && message) {
+          this.emit("messageReceived", { user, message, channel, tags });
+        }
         continue;
       }
 
-      if (line.includes("JOIN")) {
-        const userMatch = line.match(/:(\w+)!/);
-        const channelMatch = line.match(/#(\w+)/);
-        if (userMatch && channelMatch) {
-          this.emit("userJoined", { user: userMatch[1], channel: `#${channelMatch[1]}` });
+      // JOIN messages
+      const joinMatch = messageWithoutTags.match(/:(\w+)!.*JOIN (#\w+)/);
+      if (joinMatch) {
+        const [, user, channel] = joinMatch;
+        if (user && channel) {
+          this.emit("userJoined", { user, channel });
+          
+          // If the user is us, emit joined event for the channel
+          if (user.toLowerCase() === this.config.nick.toLowerCase()) {
+            this.emit("joined", channel);
+          }
         }
+        continue;
       }
 
-      if (line.includes("PART")) {
-        const userMatch = line.match(/:(\w+)!/);
-        const channelMatch = line.match(/#(\w+)/);
-        if (userMatch && channelMatch) {
-          this.emit("userLeft", { user: userMatch[1], channel: `#${channelMatch[1]}` });
+      // PART messages
+      const partMatch = messageWithoutTags.match(/:(\w+)!.*PART (#\w+)/);
+      if (partMatch) {
+        const [, user, channel] = partMatch;
+        if (user && channel) {
+          this.emit("userLeft", { user, channel });
+          
+          // If the user is us, emit left event for the channel
+          if (user.toLowerCase() === this.config.nick.toLowerCase()) {
+            this.emit("left", channel);
+          }
         }
       }
     }
