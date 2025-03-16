@@ -1,6 +1,7 @@
 // Context Providers
 export { TIRCClientProvider } from "./context/TIRCClientProvider";
 export { EmoteProvider } from "./context/EmoteProvider";
+export { TIRCProvider } from "./context";
 
 // Hooks
 export { useTIRC } from "./hooks/useTIRC";

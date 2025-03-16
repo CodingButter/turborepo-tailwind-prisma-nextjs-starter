@@ -1,7 +1,9 @@
-import React, {  useEffect, useRef, useState } from "react";
+'use client'
+
+import React, { useEffect, useRef, useState } from "react";
 import { TIRCClient, ITIRCClientConfig } from "../lib/TIRCClient";
 import { formatMessageWithEmotes, extractEmotesFromMessage } from "../utils/emoteUtils";
-import { IMessage,TIRCContext } from "../hooks/useTIRC";
+import { IMessage, TIRCContext } from "../hooks/useTIRC";
 
 
 export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children: React.ReactNode }> = ({

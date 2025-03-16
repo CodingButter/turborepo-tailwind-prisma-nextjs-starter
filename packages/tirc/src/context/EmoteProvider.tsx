@@ -1,12 +1,12 @@
-import React, {  useState, useEffect } from "react";
+'use client'
+
+import React, { useState, useEffect } from "react";
 import { fetchBTTVGlobalEmotes, fetchFFZGlobalEmotes, fetchTwitchEmotes, IEmote } from "../utils/emoteUtils";
-import { useTIRC } from "../hooks/useTIRC";
 import { EmoteContext } from "../hooks/useEmotes"
 
 export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [emotes, setEmotes] = useState<IEmote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { sendMessage } = useTIRC(); // Access `sendMessage` from chat context
 
   useEffect(() => {
     fetchEmotes();

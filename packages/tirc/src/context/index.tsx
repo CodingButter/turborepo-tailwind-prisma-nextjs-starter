@@ -1,3 +1,5 @@
+'use client'
+
 import React from "react"
 import { ITIRCClientConfig }  from "../lib/TIRCClient"
 import { TIRCClientProvider } from './TIRCClientProvider';
