@@ -1,7 +1,8 @@
+'use client'
 import { EventEmitter } from "./EventEmitter";
 
 // Define Channel type explicitly for consistent use
-export type Channel = `#${string}`;
+export type Channel = string;
 
 /**
  * Defines the structure of the IRC Client configuration.
@@ -63,7 +64,7 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
         return resolve();
       }
 
-      this.socket = new WebSocket(`wss://${this.config.server}:443`);
+      this.socket = new WebSocket(this.config.server);
 
       this.socket.onopen = () => {
         if (!this.socket) return;

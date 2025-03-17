@@ -6,13 +6,14 @@ import {TIRCProvider} from "@repo/tirc"
 // Mock config for TIRC
 
 const tircConfig = {
-  server: "irc.chat.twitch.tv",
+  server: process.env.NEXT_PUBLIC_TWITCH_SERVER || "",
   oauthToken: process.env.NEXT_PUBLIC_TWITCH_OAUTH_TOKEN || "",
   clientId: process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID || "",
   nick: process.env.NEXT_PUBLIC_TWITCH_USERNAME || "justinfan12345",
-  channels: [],
-  reconnect: true
+  channels: [`#codingbutter`],
 };
+
+console.log(tircConfig);
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",

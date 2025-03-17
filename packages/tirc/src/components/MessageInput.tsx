@@ -1,3 +1,4 @@
+'use client'
 import React, { useState } from "react";
 import { useEmotes } from "../hooks/useEmotes";
 import { formatMessageWithEmotes } from "../utils/emoteUtils";
@@ -14,7 +15,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   value,
   onChange,
   onSend,
-  emoteSize = "1x",
   className,
 }) => {
   const { emotes } = useEmotes();

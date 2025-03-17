@@ -1,3 +1,4 @@
+'use client'
 import React from "react";
 import { IMessage } from "../hooks/useTIRC"; // Fixed: Import from hooks/useTIRC instead of context
 
