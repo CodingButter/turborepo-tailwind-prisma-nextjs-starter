@@ -1,0 +1,9 @@
+{
+	"extends": "./packages/typescript-config/base.json",
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"baseUrl": "."
+	},
+	"include": ["**/*.ts", "**/*.tsx", "jest.setup.js"],
+	"exclude": ["node_modules"]
+}
