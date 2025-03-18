@@ -1,18 +1,16 @@
-"use client";
+'use client';
 
-import React from "react";
-import "../globals.css";
-
-
+import React from 'react';
+import '../globals.css';
 
 export default function ChatLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-        <div className="flex flex-col h-screen overflow-hidden bg-background text-text">
-          {children}
-        </div>
-  );
+	return (
+		<div className="flex flex-col h-screen overflow-hidden bg-background text-text">
+			{children}
+		</div>
+	);
 }
