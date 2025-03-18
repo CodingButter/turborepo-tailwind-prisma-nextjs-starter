@@ -1,5 +1,7 @@
-// Use require instead of import
-require('@testing-library/jest-dom');
+const { expect, jest } = require('@jest/globals');
+
+// Ensure global expect is defined
+global.expect = expect;
 
 // Mock window.matchMedia for theme media queries
 Object.defineProperty(window, 'matchMedia', {
@@ -39,6 +41,20 @@ Object.defineProperty(window, 'localStorage', {
 	value: localStorageMock,
 });
 
+// Add custom matchers
+expect.extend({
+	toBeInTheDocument(received) {
+		const pass = received !== null;
+		return {
+			pass,
+			message: () => `expected ${received} to be in the document`,
+		};
+	},
+});
+
+// Import jest-dom
+require('@testing-library/jest-dom');
+
 // Suppress React 19 + testing-library version mismatch warnings
 jest.spyOn(console, 'error').mockImplementation((message) => {
 	if (
@@ -48,6 +64,5 @@ jest.spyOn(console, 'error').mockImplementation((message) => {
 	) {
 		return;
 	}
-	// eslint-disable-next-line no-console
 	console.error(message);
 });
