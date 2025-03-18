@@ -7,7 +7,6 @@ export { TIRCProvider } from "./context";
 
 // Hooks
 export { useTIRC } from "./hooks/useTIRC"; 
-export type { Channel } from "./hooks/useTIRC"; // Using export type for types
 export { useEmotes } from "./hooks/useEmotes";
 
 // Components

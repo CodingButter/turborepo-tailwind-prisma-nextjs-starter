@@ -1,12 +1,13 @@
 import React from "react"
 import { X } from "lucide-react"
+import { Channel } from "@repo/tirc"
 
 interface JoinFormProps {
   newChannelInput: string
   setNewChannelInput: (value: string) => void
   joinChannel: () => void
   leaveCurrentChannel: () => void
-  currentChannel: `#${string}` | null
+  currentChannel: Channel
   isConnected: boolean
   onClose?: () => void // New prop for handling close in collapsed mode
 }

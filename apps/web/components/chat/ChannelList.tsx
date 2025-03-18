@@ -3,17 +3,18 @@ import React, { useState } from "react"
 import JoinForm from "./JoinForm"
 import ChannelMenu from "./ChannelMenu"
 import { ChevronRight, Hash } from "lucide-react"
+import { Channel } from "@repo/tirc"
 
 interface ChannelListProps {
-  channels: `#${string}`[]
-  currentChannel: `#${string}` | null
-  setCurrentChannel: (channel: `#${string}`) => void
+  channels: Channel[]
+  currentChannel: Channel | null
+  setCurrentChannel: (channel: Channel) => void
   newChannelInput: string
   setNewChannelInput: (value: string) => void
   joinChannel: () => void
-  leaveChannel: (channel: `#${string}`) => void
-  moveChannelUp: (channel: `#${string}`) => void
-  moveChannelDown: (channel: `#${string}`) => void
+  leaveChannel: (channel: Channel) => void
+  moveChannelUp: (channel: Channel) => void
+  moveChannelDown: (channel: Channel) => void
   isConnected: boolean
   collapsed: boolean
 }
@@ -55,7 +56,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
       <div className="flex-1 overflow-y-auto p-2 message-container">
         {channels.length > 0 ? (
           <div className="space-y-1">
-            {channels.map((channel) => (
+            {channels.map((channel:Channel) => channel &&(
               <div
                 key={channel}
                 className={`flex items-center justify-between w-full rounded transition-all ${
@@ -67,7 +68,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
                 <button
                   onClick={() => setCurrentChannel(channel)}
                   className="flex-1 text-left px-3 py-2 truncate"
-                  title={channel}
+                  title={channel as string}
                 >
                   {collapsed ? channel.substring(1, 2).toUpperCase() : channel}
                 </button>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useTIRC, useEmotes } from "@repo/tirc";
+import { useTIRC, useEmotes, Channel, IMessage } from "@repo/tirc";
+import { useStorage } from "@repo/storage";
 import { useSearchParams } from "next/navigation";
 import { useSidebarState } from "../hooks/useSidebarState";
 
@@ -11,14 +12,9 @@ import ChannelList from "./chat/ChannelList";
 import Header from "./chat/Header";
 import ChatInputWithCommandPopup from "./chat/ChatInputWithCommandPopup";
 import UserMessagesPopup from "./chat/UserMessagesPopup";
-import { Channel, IMessage } from "@repo/tirc";
 
 // Extract the component from the module if it's not a default export
 const MessageList = MessageListModule.default || MessageListModule.MessageList;
-
-// Define Channel type that matches the one used in TIRC
-
-
 
 const ChatInterface: React.FC = () => {
   const { client, sendMessage: tircSendMessage, messages: tircMessages } = useTIRC();
@@ -28,7 +24,7 @@ const ChatInterface: React.FC = () => {
 
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [currentChannel, setCurrentChannel] = useState<Channel | undefined | null>(null);
+  const [currentChannel, setCurrentChannel] = useStorage<Channel>(null);
   const [messageInput, setMessageInput] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [newChannelInput, setNewChannelInput] = useState("");
@@ -37,7 +33,7 @@ const ChatInterface: React.FC = () => {
   const [joinAttemptInProgress, setJoinAttemptInProgress] = useState(false);
 
   // User popup state
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useStorage<string | null>(null);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const initialJoinTimeoutRef = useRef<number | null>(null);
 
@@ -46,14 +42,6 @@ const ChatInterface: React.FC = () => {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  // Save channels to localStorage
-  const saveChannelsToLocalStorage = useCallback((channelList: Channel[]) => {
-    try {
-      localStorage.setItem("twitchJoinedChannels", JSON.stringify(channelList));
-    } catch (error) {
-      console.error("Failed to save channels to localStorage:", error);
-    }
-  }, []);
 
   // Force a string to be a valid channel - ensures we never return undefined
   const asChannel = useCallback((value: string): Channel => {
@@ -69,8 +57,8 @@ const ChatInterface: React.FC = () => {
   // Join a channel safely - correctly handle Channel typing
   const joinChannelSafely = useCallback(
     async (channelToJoin: Channel) => {
-      if (!client || !isConnected) {
-        console.log("Cannot join channel - client not available or not connected");
+      if (!client || !isConnected || !channelToJoin) {
+        console.log("Cannot join channel - client not available or not connected or invalid channel");
         return false;
       }
 
@@ -113,7 +101,10 @@ const ChatInterface: React.FC = () => {
       badges: "",
       profileImage: null,
       tags: latestMessage.tags || {}, // Use tags if available
-    } as IMessage;
+      rawMessage: latestMessage.rawMessage,
+      formattedMessage: latestMessage.formattedMessage || latestMessage.rawMessage,
+      emotes: []
+    };
     
     setMessages(prev => [...prev, newMessage]);
   }, [tircMessages]);
@@ -150,7 +141,10 @@ const ChatInterface: React.FC = () => {
       setConnectionStatus(`Error: ${data.message}`);
     };
 
-    const handleUserJoined = (data: { user:string, channel: Channel }):void => {
+    // Updated event handler to handle Channel type correctly
+    const handleUserJoined = (data: { user: string; channel: Channel }) => {
+      if (!data.channel) return;
+      
       console.log("USER JOINED event received:", data);
       // Add system message for user join
       const joinMessage: IMessage = {
@@ -163,11 +157,17 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
         isCurrentUser: false,
         tags: {},
-      } as IMessage;
+        rawMessage: `${data.user} joined the channel`,
+        formattedMessage: `${data.user} joined the channel`,
+        emotes: []
+      };
       setMessages(prev => [...prev, joinMessage]);
     };
 
-    const handleUserLeft = (data:{ user: string; channel: Channel }) => {
+    // Updated event handler to handle Channel type correctly
+    const handleUserLeft = (data: { user: string; channel: Channel }) => {
+      if (!data.channel) return;
+      
       console.log("USER LEFT event received:", data);
       // Add system message for user leave
       const leftMessage: IMessage = {
@@ -180,7 +180,10 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
         isCurrentUser: false,
         tags: {},
-      } as IMessage
+        rawMessage: `${data.user} left the channel`,
+        formattedMessage: `${data.user} left the channel`,
+        emotes: []
+      };
       setMessages(prev => [...prev, leftMessage]);
     };
 
@@ -201,25 +204,24 @@ const ChatInterface: React.FC = () => {
   }, [client]);
 
   // Handle channel join/leave events with improved stability
-  const handleChannelJoined = useCallback((channelName: string) => {
-    console.log(`JOINED event received for channel: ${channelName}`);
-    
-    // Skip if channelName is invalid
-    if (!channelName || typeof channelName !== 'string') {
+  const handleChannelJoined = useCallback((channelName: Channel) => {
+    if (!channelName) {
       console.log("Invalid channel name received:", channelName);
       return;
     }
     
+    console.log(`JOINED event received for channel: ${channelName}`);
+    
     // Ensure it's a properly formatted channel
-    const validChannel: Channel = asChannel(channelName);
+    const validChannel: Channel = channelName;
     
     console.log(`Chat interface noticed channel joined: ${validChannel}`);
     
     setChannels(prev => {
       console.log("Current channels:", prev);
       // Normalize channel names for comparison
-      const normalizedExisting = prev.map(ch => ch.toLowerCase());
-      const normalizedNew = validChannel.toLowerCase();
+      const normalizedExisting = prev.map(ch => ch ? ch.toLowerCase() : "");
+      const normalizedNew = validChannel ? validChannel.toLowerCase() : "";
       
       if (!normalizedExisting.includes(normalizedNew)) {
         console.log(`Adding new channel ${validChannel} to list`);
@@ -231,8 +233,6 @@ const ChatInterface: React.FC = () => {
           setCurrentChannel(validChannel);
         }
 
-        // Save to localStorage
-        saveChannelsToLocalStorage(newChannels);
         return newChannels;
       }
       
@@ -251,41 +251,46 @@ const ChatInterface: React.FC = () => {
       timestamp: new Date(),
       isCurrentUser: false,
       tags: {},
+      rawMessage: `Joined channel ${validChannel}`,
+      formattedMessage: `Joined channel ${validChannel}`,
+      emotes: []
     };
     setMessages(prev => [...prev, joinMessage]);
-  }, [asChannel, currentChannel, saveChannelsToLocalStorage]);
+  }, [currentChannel,setCurrentChannel]);
 
-  const handleChannelLeft = useCallback((channelName: string) => {
-    console.log(`LEFT event received for channel: ${channelName}`);
-    
-    // Skip if channelName is invalid
-    if (!channelName || typeof channelName !== 'string') {
+  const handleChannelLeft = useCallback((channelName: Channel) => {
+    if (!channelName) {
       console.log("Invalid channel name received:", channelName);
       return;
     }
     
+    console.log(`LEFT event received for channel: ${channelName}`);
+    
     // Ensure it's a properly formatted channel
-    const validChannel: Channel = asChannel(channelName);
+    const validChannel: Channel = channelName;
     
     // Make a copy of channels for use in the callback
     const currentChannelsCopy = [...channels];
     
     setChannels(prev => {
-      const updatedChannels = prev.filter(ch => ch.toLowerCase() !== validChannel.toLowerCase());
+      const updatedChannels = prev.filter(ch => {
+        if (!ch || !validChannel) return true;
+        return ch.toLowerCase() !== validChannel.toLowerCase();
+      });
       console.log(`Removing channel ${validChannel}, updated list:`, updatedChannels);
       // Save to localStorage
-      saveChannelsToLocalStorage(updatedChannels);
       return updatedChannels;
     });
 
     // Update current channel if needed - fixed to never return undefined
-    setCurrentChannel((current) => {
+    setCurrentChannel((current:Channel) => {
       // If the current channel is the one being left, find another
-      if (current?.toLowerCase() === validChannel.toLowerCase()) {
+      if (current && validChannel && current.toLowerCase() === validChannel.toLowerCase()) {
         // Get channels that will remain
-        const remainingChannels = currentChannelsCopy.filter(
-          ch => ch.toLowerCase() !== validChannel.toLowerCase()
-        );
+        const remainingChannels = currentChannelsCopy.filter(ch => {
+          if (!ch || !validChannel) return true;
+          return ch.toLowerCase() !== validChannel.toLowerCase();
+        });
         // Return either the first remaining channel or null (never undefined)
         return remainingChannels.length > 0 ? remainingChannels[0] : null;
       }
@@ -304,9 +309,12 @@ const ChatInterface: React.FC = () => {
       timestamp: new Date(),
       isCurrentUser: false,
       tags: {},
+      rawMessage: `Left channel ${validChannel}`,
+      formattedMessage: `Left channel ${validChannel}`,
+      emotes: []
     };
     setMessages(prev => [...prev, leaveMessage]);
-  }, [asChannel, channels, saveChannelsToLocalStorage]);
+  }, [channels,setCurrentChannel]);
 
   // Register channel event handlers separately with stable references
   useEffect(() => {
@@ -377,7 +385,10 @@ const ChatInterface: React.FC = () => {
             setTimeout(async () => {
               // Safe to access - we've checked array.length > 0
               const channel = channelsToJoin[index];
-              await joinChannelSafely(channel);
+              if (channel) {
+                const joined = await joinChannelSafely(channel);
+                if(joined)setChannels((prev) => [...prev, channel]);
+              }
 
               // If this is the last channel, clear the flag
               if (index === channelsToJoin.length - 1) {
@@ -436,6 +447,9 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
         isCurrentUser: true,
         tags: {},
+        rawMessage: content,
+        formattedMessage: content,
+        emotes: []
       };
       setMessages(prev => [...prev, selfMessage]);
 
@@ -457,6 +471,13 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
         isCurrentUser: false,
         tags: {},
+        rawMessage: `Failed to send message: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        formattedMessage: `Failed to send message: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        emotes: []
       };
       setMessages((prev) => [...prev, errorMessage]);
     }
@@ -491,6 +512,13 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
         isCurrentUser: false,
         tags: {},
+        rawMessage: `Failed to join channel: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        formattedMessage: `Failed to join channel: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        emotes: []
       };
       setMessages((prev) => [...prev, errorMessage]);
     }
@@ -498,7 +526,7 @@ const ChatInterface: React.FC = () => {
 
   // Leave a specific channel
   const leaveChannel = (channelToLeave: Channel) => {
-    if (!isConnected || !client) return;
+    if (!isConnected || !client || !channelToLeave) return;
 
     try {
       // Correct way to send a PART command - use a constant for the default Channel
@@ -512,25 +540,32 @@ const ChatInterface: React.FC = () => {
 
   // Move a channel up in the list
   const moveChannelUp = (channelToMove: Channel) => {
+    if (!channelToMove) return;
+    
     setChannels((prevChannels) => {
-      const index = prevChannels.indexOf(channelToMove);
+      const index = prevChannels.findIndex(channel => 
+        channel && channelToMove && channel.toLowerCase() === channelToMove.toLowerCase()
+      );
+      
       if (index <= 0) return prevChannels; // Already at the top or not found
 
       const newChannels = [...prevChannels];
       // Swap the channel with the one above it
       [newChannels[index - 1], newChannels[index]] = [newChannels[index], newChannels[index - 1]];
 
-      // Save the updated order to localStorage
-      saveChannelsToLocalStorage(newChannels);
-
-      return newChannels;
+        return newChannels;
     });
   };
 
   // Move a channel down in the list
   const moveChannelDown = (channelToMove: Channel) => {
+    if (!channelToMove) return;
+    
     setChannels((prevChannels) => {
-      const index = prevChannels.indexOf(channelToMove);
+      const index = prevChannels.findIndex(channel => 
+        channel && channelToMove && channel.toLowerCase() === channelToMove.toLowerCase()
+      );
+      
       if (index === -1 || index === prevChannels.length - 1) {
         return prevChannels; // Not found or already at the bottom
       }
@@ -539,8 +574,6 @@ const ChatInterface: React.FC = () => {
       // Swap the channel with the one below it
       [newChannels[index], newChannels[index + 1]] = [newChannels[index + 1], newChannels[index]];
 
-      // Save the updated order to localStorage
-      saveChannelsToLocalStorage(newChannels);
 
       return newChannels;
     });

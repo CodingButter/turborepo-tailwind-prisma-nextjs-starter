@@ -4,11 +4,12 @@ import React from "react";
 import Link from "next/link";
 import { Menu, ChevronsLeft, Hash, Home } from "lucide-react";
 import { ThemeSwitcher } from "@repo/theme";
+import { Channel } from "@repo/tirc";
 
 interface HeaderProps {
   isConnected: boolean;
   connectionStatus: string;
-  currentChannel: `#${string}` | null;
+  currentChannel: Channel;
   onToggleSidebar: () => void;
   sidebarCollapsed: boolean;
 }

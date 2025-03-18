@@ -194,8 +194,9 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
       const joinMatch = messageWithoutTags.match(/:(\w+)!.*JOIN (#\w+)/);
       if (joinMatch) {
         const [, user, channelStr] = joinMatch;
+        const channel:Channel = `#${channelStr}`; 
         if (user && channelStr) {
-          this.emit("userJoined", { user, channel: channelStr });
+          this.emit("userJoined", { user, channel });
           
           // If the user is us, emit joined event for the channel
           if (user.toLowerCase() === this.config.nick.toLowerCase()) {
@@ -211,8 +212,9 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
       const partMatch = messageWithoutTags.match(/:(\w+)!.*PART (#\w+)/);
       if (partMatch) {
         const [, user, channelStr] = partMatch;
+        const channel:Channel = `#${channelStr}`; 
         if (user && channelStr) {
-          this.emit("userLeft", { user, channel: channelStr });
+          this.emit("userLeft", { user, channel });
           
           // If the user is us, emit left event for the channel
           if (user.toLowerCase() === this.config.nick.toLowerCase()) {

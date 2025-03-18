@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Message } from "../../types/Message";
+import { IMessage,Channel } from "@repo/tirc";
 import { ArrowRight, Hash, Search } from "lucide-react";
 import ChatSearchBar, { ChatFilters } from "./ChatSearchBar";
 import MessageItem from "./MessageItem";
 
 interface MessageListProps {
-  messages: Message[];
-  currentChannel: `#${string}` | null;
+  messages: IMessage[];
+  currentChannel: Channel;
   onUsernameClick?: (username: string) => void;
 }
 
@@ -26,7 +26,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     highlightMentions: true,
     onlyFromUser: null,
   });
-  const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
+  const [filteredMessages, setFilteredMessages] = useState<IMessage[]>([]);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [lastScrollPosition, setLastScrollPosition] = useState(0);
 

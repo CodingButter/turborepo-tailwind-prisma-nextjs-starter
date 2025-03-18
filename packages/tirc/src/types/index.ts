@@ -53,8 +53,7 @@ export type TIRCEvents = {
     getNick(): string;
   }
   // types/Message.ts
-export type ChannelName = `#${string}`;
-export type Channel = ChannelName | undefined | null;
+export type Channel = `#${string}` | null | undefined;
 export interface Tags {
   "badge-info"?: string
   badges?: string

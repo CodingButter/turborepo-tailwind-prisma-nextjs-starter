@@ -1,7 +1,7 @@
 'use client'
 
 import { useContext, createContext } from "react"
-import { IEmote } from "../utils/emoteUtils";
+import { IEmote } from "../";
 
 export interface EmoteContextType {
   emotes: IEmote[];

@@ -2,10 +2,8 @@
 
 import { useContext, createContext } from "react";
 import { TIRCClient } from "../lib/TIRCClient";
-import {  IMessage } from "../types";
+import {  IMessage, Channel} from "../types";
 
-// Define Channel type to match what's used in TIRCClient
-export type Channel = `#${string}`;
 
 /**
  * Defines the structure of a chat message.
