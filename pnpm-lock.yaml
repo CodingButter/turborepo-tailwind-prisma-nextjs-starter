@@ -9,14 +9,17 @@ importers:
   .:
     devDependencies:
       '@testing-library/jest-dom':
-        specifier: ^6.1.5
+        specifier: ^6.6.3
         version: 6.6.3
       '@testing-library/react':
         specifier: ^14.1.2
         version: 14.3.1(@types/react@19.0.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@types/jest':
-        specifier: ^29.5.11
+        specifier: ^29.5.14
         version: 29.5.14
+      '@types/node':
+        specifier: ^22.13.9
+        version: 22.13.10
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@22.13.10)(ts-node@10.9.2(@types/node@22.13.10)(typescript@5.8.2))
@@ -27,7 +30,7 @@ importers:
         specifier: ^3.5.3
         version: 3.5.3
       ts-jest:
-        specifier: ^29.1.1
+        specifier: ^29.2.6
         version: 29.2.6(@babel/core@7.26.10)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.26.10))(jest@29.7.0(@types/node@22.13.10)(ts-node@10.9.2(@types/node@22.13.10)(typescript@5.8.2)))(typescript@5.8.2)
       turbo:
         specifier: ^2.4.4
@@ -240,6 +243,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.13.9
+        version: 22.13.10
       '@types/react':
         specifier: 19.0.10
         version: 19.0.10
