@@ -482,47 +482,83 @@ const ChatInterface: React.FC = () => {
       setMessages((prev) => [...prev, errorMessage]);
     }
   };
+// Replace the existing joinChannel function in apps/web/components/ChatInterface.tsx
+// with this implementation
 
-  // Join a new channel
-  const joinChannel = () => {
-    // Early return if requirements not met
-    if (!newChannelInput.trim() || !isConnected || !client) return;
+const joinChannel = async () => {
+  // Early return if requirements not met
+  if (!newChannelInput.trim() || !isConnected || !client) return;
 
-    // Create a properly typed channel
-    const channelToJoin: Channel = asChannel(newChannelInput);
+  // Create a properly typed channel
+  const channelToJoin: Channel = asChannel(newChannelInput);
 
-    try {
-      // Use the validated channel
-      joinChannelSafely(channelToJoin);
-      setNewChannelInput("");
-    } catch (error) {
-      console.error("Failed to join channel:", error);
-
-      // Use a literal to ensure we have a valid Channel for system messages
-      const systemChannel: Channel = currentChannel || "#system";
-      const errorMessage: IMessage = {
+  try {
+    // Use the validated channel and await the result
+    const joined = await joinChannelSafely(channelToJoin);
+    
+    // If joined successfully, update the channels list directly
+    if (joined) {
+      console.log(`Directly updating channels list with: ${channelToJoin}`);
+      setChannels(prev => {
+        // Avoid duplicates
+        if (!prev.some(ch => ch && channelToJoin && ch.toLowerCase() === channelToJoin.toLowerCase())) {
+          return [...prev, channelToJoin];
+        }
+        return prev;
+      });
+      
+      // If this is the first channel, set it as current
+      if (!currentChannel) {
+        setCurrentChannel(channelToJoin);
+      }
+      
+      // Add system message about joining
+      const joinMessage: IMessage = {
         id: generateUniqueId(),
-        channel: systemChannel,
+        channel: channelToJoin,
         username: "system",
         displayName: "System",
-        content: `Failed to join channel: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        color: "var(--color-error)",
+        content: `Joined channel ${channelToJoin}`,
+        color: "var(--color-success)",
         timestamp: new Date(),
         isCurrentUser: false,
         tags: {},
-        rawMessage: `Failed to join channel: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        formattedMessage: `Failed to join channel: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        rawMessage: `Joined channel ${channelToJoin}`,
+        formattedMessage: `Joined channel ${channelToJoin}`,
         emotes: []
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages(prev => [...prev, joinMessage]);
     }
-  };
+    
+    setNewChannelInput("");
+  } catch (error) {
+    console.error("Failed to join channel:", error);
+    
+    // Use a literal to ensure we have a valid Channel for system messages
+    const systemChannel: Channel = currentChannel || "#system";
+    const errorMessage: IMessage = {
+      id: generateUniqueId(),
+      channel: systemChannel,
+      username: "system",
+      displayName: "System",
+      content: `Failed to join channel: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      color: "var(--color-error)",
+      timestamp: new Date(),
+      isCurrentUser: false,
+      tags: {},
+      rawMessage: `Failed to join channel: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      formattedMessage: `Failed to join channel: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      emotes: []
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+  }
+};
 
   // Leave a specific channel
   const leaveChannel = (channelToLeave: Channel) => {

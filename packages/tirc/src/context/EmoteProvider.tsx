@@ -1,7 +1,14 @@
 'use client'
 
 import React, { useState, useEffect, useContext, useCallback } from "react";
-import { fetchBTTVGlobalEmotes, fetchFFZGlobalEmotes, fetchTwitchEmotes, IEmote } from "../";
+import { 
+  fetchBTTVGlobalEmotes, 
+  fetchFFZGlobalEmotes, 
+  fetchTwitchEmotes, 
+  IEmote,
+  fetchBTTVChannelEmotes,
+  fetchFFZChannelEmotes
+} from "../";
 import { EmoteContext } from "../hooks/useEmotes";
 import { TIRCContext } from "../hooks/useTIRC";
 
@@ -9,6 +16,7 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [emotes, setEmotes] = useState<IEmote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const tircContext = useContext(TIRCContext);
+  const [lastChannelId, setLastChannelId] = useState<string | null>(null);
 
   // Get clientId from TIRCContext
   const clientId = tircContext?.clientId || "";
@@ -17,26 +25,53 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /**
    * Fetches global and channel-specific emotes.
    */
-  const fetchEmotes = useCallback(async () => {
+  const fetchEmotes = useCallback(async (channelId?: string) => {
     setIsLoading(true);
+    const allEmotes: IEmote[] = [];
+    
     try {
+      console.log("Fetching emotes...");
+      // Always fetch global emotes
       const bttvGlobal = await fetchBTTVGlobalEmotes();
+      console.log(`Fetched ${bttvGlobal.length} BTTV global emotes`);
+      allEmotes.push(...bttvGlobal);
+      
       const ffzGlobal = await fetchFFZGlobalEmotes();
+      console.log(`Fetched ${ffzGlobal.length} FFZ global emotes`);
+      allEmotes.push(...ffzGlobal);
+      
+      // If we have a channel ID, fetch channel-specific emotes
+      if (channelId) {
+        try {
+          const bttvChannel = await fetchBTTVChannelEmotes("twitch", channelId);
+          console.log(`Fetched ${bttvChannel.length} BTTV channel emotes for channel ${channelId}`);
+          allEmotes.push(...bttvChannel);
+          
+          const ffzChannel = await fetchFFZChannelEmotes(channelId);
+          console.log(`Fetched ${ffzChannel.length} FFZ channel emotes for channel ${channelId}`);
+          allEmotes.push(...ffzChannel);
+          
+          setLastChannelId(channelId);
+        } catch (error) {
+          console.warn("Failed to fetch channel-specific emotes:", error);
+        }
+      }
       
       // Only attempt to fetch Twitch emotes if we have both clientId and oauthToken
-      let twitchEmotes: IEmote[] = [];
       if (clientId && oauthToken) {
         try {
-          twitchEmotes = await fetchTwitchEmotes(clientId, oauthToken);
+          const twitchEmotes = await fetchTwitchEmotes(clientId, oauthToken);
+          console.log(`Fetched ${twitchEmotes.length} Twitch emotes`);
+          allEmotes.push(...twitchEmotes);
         } catch (error) {
           console.warn("Failed to fetch Twitch emotes:", error);
-          // Continue with other emotes even if Twitch emotes fail
         }
       } else {
         console.warn("Missing Twitch credentials, skipping Twitch emotes");
       }
       
-      setEmotes([...bttvGlobal, ...ffzGlobal, ...twitchEmotes]);
+      console.log(`Total emotes fetched: ${allEmotes.length}`);
+      setEmotes(allEmotes);
     } catch (error) {
       console.error("Error fetching emotes:", error);
     } finally {
@@ -44,14 +79,40 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [clientId, oauthToken]);
 
+  // Fetch emotes on initial load
   useEffect(() => {
-    if (clientId && oauthToken) {
-      fetchEmotes();
+    fetchEmotes();
+  }, [fetchEmotes]);
+
+  // Re-fetch when the client connects
+  useEffect(() => {
+    if (tircContext?.client) {
+      const handleConnect = () => {
+        console.log("Client connected, fetching emotes");
+        fetchEmotes();
+      };
+      
+      tircContext.client.on("connected", handleConnect);
+      return () => {
+        tircContext.client.off("connected", handleConnect);
+      };
     }
-  }, [clientId, oauthToken, fetchEmotes]);
+  }, [tircContext?.client, fetchEmotes]);
+
+  // A function to get emote by name
+  const getEmote = useCallback((name: string): IEmote | undefined => {
+    return emotes.find(emote => 
+      emote.name.toLowerCase() === name.toLowerCase()
+    );
+  }, [emotes]);
 
   return (
-    <EmoteContext.Provider value={{ emotes, isLoading, fetchEmotes }}>
+    <EmoteContext.Provider value={{ 
+      emotes, 
+      isLoading, 
+      fetchEmotes,
+      getEmote 
+    }}>
       {children}
     </EmoteContext.Provider>
   );

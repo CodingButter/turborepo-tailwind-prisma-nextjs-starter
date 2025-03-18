@@ -1,16 +1,16 @@
 'use client'
 
-import { useContext, createContext } from "react"
+import { useContext, createContext } from "react";
 import { IEmote } from "../";
 
 export interface EmoteContextType {
   emotes: IEmote[];
   isLoading: boolean;
-  fetchEmotes: () => void;
+  fetchEmotes: (channelId?: string) => void;
+  getEmote: (name: string) => IEmote | undefined;
 }
 
 export const EmoteContext = createContext<EmoteContextType | null>(null);
-
 
 /**
  * Hook to access emote data.
@@ -22,15 +22,5 @@ export const useEmotes = () => {
     throw new Error("useEmotes must be used within an EmoteProvider");
   }
 
-  const { emotes, isLoading, fetchEmotes } = context;
-
-  /**
-   * Retrieves an emote by name.
-   * @param name - The emote name.
-   */
-  const getEmote = (name: string): IEmote | undefined => {
-    return emotes.find((emote) => emote.name.toLowerCase() === name.toLowerCase());
-  };
-
-  return { emotes, isLoading, fetchEmotes, getEmote };
+  return context;
 };

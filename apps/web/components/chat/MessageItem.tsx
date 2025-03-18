@@ -2,12 +2,12 @@
 
 import React from "react";
 import Image from "next/image";
-import { parseEmotes, getTwitchEmoteUrl, splitMessageWithEmotes } from "@repo/tirc";
-import { Message } from "../../types/Message";
-import { ThirdPartyEmote, ChannelEmote } from "../../types/Message";
+
+import { parseEmotes, getTwitchEmoteUrl, splitMessageWithEmotes, useEmotes,IMessage} from "@repo/tirc";
+
 
 interface MessageItemProps {
-  message: Message;
+  message: IMessage;
   onUsernameClick: (username: string) => void;
   showTimestamp?: boolean;
   highlightMentions?: boolean;
@@ -19,33 +19,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
   showTimestamp = true,
   highlightMentions = false,
 }) => {
-  // Manually implement third-party emote finding
-  const findThirdPartyEmotes = (message: string): Array<string | ThirdPartyEmote> => {
-    // Default empty emote map to satisfy TypeScript
-    const channelEmotes: Record<string, ChannelEmote> = {};
-    const words = message.split(" ");
-    const parts: Array<string | ThirdPartyEmote> = [];
-
-    for (const word of words) {
-      if (channelEmotes[word]) {
-        parts.push({
-          type: "emote",
-          code: word,
-          url: channelEmotes[word].url,
-        });
-      } else {
-        // If the last part is a string, append to it
-        const lastPart = parts[parts.length - 1];
-        if (typeof lastPart === "string") {
-          parts[parts.length - 1] = `${lastPart} ${word}`;
-        } else {
-          parts.push(word);
-        }
-      }
-    }
-
-    return parts;
-  };
+  // Add useEmotes hook to access emotes
+  const { getEmote } = useEmotes();
 
   // If it's a system message, render differently
   if (message.username === "system") {
@@ -65,7 +40,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   }
 
   // Parse Twitch emotes from the tags
-  const twEmotes = parseEmotes(message.tags.emotes, message.content);
+  const twEmotes = message.tags?.emotes ? parseEmotes(message.tags.emotes, message.content) : [];
 
   // Create a memoization cache for this render cycle
   const emoteCache = new Map<string, React.ReactNode>();
@@ -73,57 +48,57 @@ const MessageItem: React.FC<MessageItemProps> = ({
   // Render message content with emotes
   const renderMessageContent = () => {
     // If there are Twitch emotes, process them
-    if (twEmotes.length) {
+    if (twEmotes && twEmotes.length > 0) {
       // Split the message into parts (text and emotes)
       const messageParts = splitMessageWithEmotes(message.content, twEmotes);
-
+      
       return (
         <p className="break-words flex flex-wrap items-center">
-          {messageParts.map((part: string | any, index: number) => {
+          {messageParts.map((part, index) => {
             if (typeof part === "string") {
-              // Process this text part for third-party emotes
-              const channelId = message.tags["room-id"] || "";
-
-              if (channelId) {
-                const thirdPartyParts = findThirdPartyEmotes(part);
-
-                return (
-                  <React.Fragment key={index}>
-                    {thirdPartyParts.map((tpPart: string | ThirdPartyEmote, tpIndex: number) => {
-                      if (typeof tpPart === "string") {
-                        return <span key={`${index}-${tpIndex}`}>{tpPart}</span>;
-                      } else {
-                        // It's a third-party emote
-                        const cacheKey = `tp-${tpPart.code}-${tpPart.url}`;
-
-                        if (!emoteCache.has(cacheKey)) {
-                          emoteCache.set(
-                            cacheKey,
-                            <span className="inline-block mx-1 align-middle relative w-7 h-7">
-                              <Image
-                                src={tpPart.url}
-                                alt={tpPart.code}
-                                title={tpPart.code}
-                                width={28}
-                                height={28}
-                                loading="lazy"
-                              />
-                            </span>
-                          );
-                        }
-
-                        return <span key={`${index}-${tpIndex}`}>{emoteCache.get(cacheKey)}</span>;
+              // Process text part for third-party emotes
+              const words = part.split(" ");
+              
+              return (
+                <React.Fragment key={index}>
+                  {words.map((word, wordIndex) => {
+                    // Check if word is an emote
+                    const emote = getEmote?.(word);
+                    
+                    if (emote) {
+                      // It's an emote
+                      const cacheKey = `emote-${emote.id}-${word}`;
+                      
+                      if (!emoteCache.has(cacheKey)) {
+                        emoteCache.set(
+                          cacheKey,
+                          <span key={`${index}-${wordIndex}`} className="inline-block mx-1 align-middle relative w-7 h-7">
+                            <Image
+                              src={emote.urls["1x"] || ""}
+                              alt={word}
+                              title={word}
+                              width={28}
+                              height={28}
+                              loading="lazy"
+                            />
+                          </span>
+                        );
                       }
-                    })}
-                  </React.Fragment>
-                );
-              }
-
-              return <span key={index}>{part}</span>;
+                      
+                      return <span key={`${index}-${wordIndex}`}>{emoteCache.get(cacheKey)}</span>;
+                    }
+                    
+                    // Regular word
+                    return wordIndex > 0 
+                      ? <span key={`${index}-${wordIndex}`}> {word}</span>
+                      : <span key={`${index}-${wordIndex}`}>{word}</span>;
+                  })}
+                </React.Fragment>
+              );
             } else {
               // It's a Twitch emote
               const cacheKey = `tw-${part.id}-${part.code}`;
-
+              
               if (!emoteCache.has(cacheKey)) {
                 emoteCache.set(
                   cacheKey,
@@ -139,52 +114,45 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   </span>
                 );
               }
-
+              
               return <span key={index}>{emoteCache.get(cacheKey)}</span>;
             }
           })}
         </p>
       );
     } else {
-      // No Twitch emotes, check for third-party emotes
-      const channelId = message.tags["room-id"] || "";
-
-      if (channelId) {
-        const thirdPartyParts = findThirdPartyEmotes(message.content);
-
-        return (
-          <p className="break-words flex flex-wrap items-center">
-            {thirdPartyParts.map((part: string | ThirdPartyEmote, index: number) => {
-              if (typeof part === "string") {
-                return <span key={index}>{part}</span>;
-              } else {
-                const cacheKey = `tp-${part.code}-${part.url}`;
-
-                if (!emoteCache.has(cacheKey)) {
-                  emoteCache.set(
-                    cacheKey,
-                    <span className="inline-block mx-1 align-middle relative w-7 h-7">
-                      <Image
-                        src={part.url}
-                        alt={part.code}
-                        title={part.code}
-                        width={28}
-                        height={28}
-                        loading="lazy"
-                      />
-                    </span>
-                  );
-                }
-
-                return <span key={index}>{emoteCache.get(cacheKey)}</span>;
-              }
-            })}
-          </p>
-        );
-      }
-
-      // No emotes at all, just render the text
-      return <p className="break-words">{message.content}</p>;
+      // No Twitch emotes, check each word for third-party emotes
+      const words = message.content.split(" ");
+      
+      return (
+        <p className="break-words flex flex-wrap items-center">
+          {words.map((word, index) => {
+            // Check if word is an emote
+            const emote = getEmote?.(word);
+            
+            if (emote) {
+              // It's an emote
+              return (
+                <span key={index} className="inline-block mx-1 align-middle relative w-7 h-7">
+                  <Image
+                    src={emote.urls["1x"] || ""}
+                    alt={word}
+                    title={word}
+                    width={28}
+                    height={28}
+                    loading="lazy"
+                  />
+                </span>
+              );
+            }
+            
+            // Regular word
+            return index > 0 
+              ? <span key={index}> {word}</span>
+              : <span key={index}>{word}</span>;
+          })}
+        </p>
+      );
     }
   };
 
