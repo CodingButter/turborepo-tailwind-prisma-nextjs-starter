@@ -10,17 +10,17 @@ export interface EmoteContextType {
   getEmote: (name: string) => IEmote | undefined;
 }
 
-export const EmoteContext = createContext<EmoteContextType | null>(null);
+export const EmoteContext = createContext<EmoteContextType>({
+  emotes: [],
+  isLoading: false,
+  fetchEmotes: () => {},
+  getEmote: () => undefined
+});
 
 /**
  * Hook to access emote data.
  */
 export const useEmotes = () => {
   const context = useContext(EmoteContext);
-
-  if (!context) {
-    throw new Error("useEmotes must be used within an EmoteProvider");
-  }
-
   return context;
 };

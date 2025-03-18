@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { 
   fetchBTTVGlobalEmotes, 
   fetchFFZGlobalEmotes, 
@@ -16,7 +16,9 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [emotes, setEmotes] = useState<IEmote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const tircContext = useContext(TIRCContext);
-  const [lastChannelId, setLastChannelId] = useState<string | null>(null);
+  const lastChannelIdRef = useRef<string | null>(null);
+  const fetchCountRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   // Get clientId from TIRCContext
   const clientId = tircContext?.clientId || "";
@@ -26,6 +28,17 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * Fetches global and channel-specific emotes.
    */
   const fetchEmotes = useCallback(async (channelId?: string) => {
+    // Prevent fetching if already loading or same channel
+    if (isLoading) return;
+    if (channelId && channelId === lastChannelIdRef.current) return;
+    
+    // Track fetch count to detect loops
+    fetchCountRef.current += 1;
+    if (fetchCountRef.current > 10) {
+      console.warn("Too many emote fetch attempts, aborting to prevent infinite loop");
+      return;
+    }
+    
     setIsLoading(true);
     const allEmotes: IEmote[] = [];
     
@@ -51,7 +64,7 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           console.log(`Fetched ${ffzChannel.length} FFZ channel emotes for channel ${channelId}`);
           allEmotes.push(...ffzChannel);
           
-          setLastChannelId(channelId);
+          lastChannelIdRef.current = channelId;
         } catch (error) {
           console.warn("Failed to fetch channel-specific emotes:", error);
         }
@@ -71,33 +84,51 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       console.log(`Total emotes fetched: ${allEmotes.length}`);
-      setEmotes(allEmotes);
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setEmotes(allEmotes);
+      }
     } catch (error) {
       console.error("Error fetching emotes:", error);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [clientId, oauthToken]);
+  }, [clientId, oauthToken, isLoading]); // Remove isLoading from dependencies to prevent loops
 
-  // Fetch emotes on initial load
+  // Fetch emotes on initial load - ONCE
   useEffect(() => {
     fetchEmotes();
-  }, [fetchEmotes]);
+    
+    // Reset fetch count after initial load
+    setTimeout(() => {
+      fetchCountRef.current = 0;
+    }, 5000);
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [fetchEmotes]); // Empty dependency array to run ONCE
 
-  // Re-fetch when the client connects
+  // Re-fetch when the client connects - with safeguards
   useEffect(() => {
-    if (tircContext?.client) {
-      const handleConnect = () => {
-        console.log("Client connected, fetching emotes");
-        fetchEmotes();
-      };
-      
-      tircContext.client.on("connected", handleConnect);
-      return () => {
-        tircContext.client.off("connected", handleConnect);
-      };
-    }
-  }, [tircContext?.client, fetchEmotes]);
+    const client = tircContext?.client;
+    if (!client) return;
+    
+    const handleConnect = () => {
+      console.log("Client connected, fetching emotes");
+      // Reset fetch count on connection event
+      fetchCountRef.current = 0;
+      fetchEmotes();
+    };
+    
+    client.on("connected", handleConnect);
+    return () => {
+      client.off("connected", handleConnect);
+    };
+  }, [tircContext?.client,fetchEmotes]); // Only depend on client reference
 
   // A function to get emote by name
   const getEmote = useCallback((name: string): IEmote | undefined => {
@@ -106,11 +137,17 @@ export const EmoteProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }, [emotes]);
 
+  // Provide a manual refresh function that resets the count
+  const manualRefresh = useCallback((channelId?: string) => {
+    fetchCountRef.current = 0;
+    fetchEmotes(channelId);
+  }, [fetchEmotes]);
+
   return (
     <EmoteContext.Provider value={{ 
       emotes, 
       isLoading, 
-      fetchEmotes,
+      fetchEmotes: manualRefresh, // Use the safe version
       getEmote 
     }}>
       {children}
