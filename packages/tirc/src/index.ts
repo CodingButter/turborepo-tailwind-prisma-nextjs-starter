@@ -30,16 +30,6 @@ export {
 
 // Types 
 export type { ITIRCClientConfig } from "./lib/TIRCClient";
-export type { IMessage } from "./hooks/useTIRC";
-export type { 
-  IEmote,
-  IBTTVEmote,
-  IFFZEmote,
-  ITwitchEmote,
-  EmotePosition,
-  EmoteInfo,
-  MessagePart
-} from "./utils/emoteUtils";
 
 // Re-export types from typings directory
-export * from "../typings";
+export * from "./types";

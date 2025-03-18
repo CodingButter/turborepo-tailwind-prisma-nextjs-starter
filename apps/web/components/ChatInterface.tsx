@@ -11,54 +11,14 @@ import ChannelList from "./chat/ChannelList";
 import Header from "./chat/Header";
 import ChatInputWithCommandPopup from "./chat/ChatInputWithCommandPopup";
 import UserMessagesPopup from "./chat/UserMessagesPopup";
-import { Message } from "../types/Message";
+import { Channel, IMessage } from "@repo/tirc";
 
 // Extract the component from the module if it's not a default export
 const MessageList = MessageListModule.default || MessageListModule.MessageList;
 
 // Define Channel type that matches the one used in TIRC
-type Channel = `#${string}`;
 
-// Extended interface for TIRC messages
-interface TIRCMessage {
-  id: string;
-  user: string;
-  channel: string;
-  rawMessage: string;
-  formattedMessage: string;
-  tags?: Record<string, string>;
-}
 
-// Define specific event handler types
-type ConnectHandler = () => void;
-type DisconnectHandler = () => void;
-type ErrorHandler = (data: { message: string }) => void;
-type UserEventHandler = (data: { user: string; channel: string }) => void;
-type ChannelEventHandler = (channelName: string) => void;
-
-// Simplified TIRC client interface with specific handler types
-interface SimpleTircClient {
-  sendMessage: (channel: Channel, message: string) => void;
-  on(event: "connected", callback: ConnectHandler): void;
-  on(event: "disconnected", callback: DisconnectHandler): void;
-  on(event: "error", callback: ErrorHandler): void;
-  on(event: "userJoined" | "userLeft", callback: UserEventHandler): void;
-  on(event: "joined" | "left", callback: ChannelEventHandler): void;
-  off(event: "connected", callback: ConnectHandler): void;
-  off(event: "disconnected", callback: DisconnectHandler): void;
-  off(event: "error", callback: ErrorHandler): void;
-  off(event: "userJoined" | "userLeft", callback: UserEventHandler): void;
-  off(event: "joined" | "left", callback: ChannelEventHandler): void;
-  getNick?: () => string;
-}
-
-// Force a string to be a valid channel
-function asChannel(value: string): Channel {
-  if (!value.startsWith('#')) {
-    return `#${value}` as Channel;
-  }
-  return value as Channel;
-}
 
 const ChatInterface: React.FC = () => {
   const { client, sendMessage: tircSendMessage, messages: tircMessages } = useTIRC();
@@ -66,9 +26,9 @@ const ChatInterface: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarState(false);
   const searchParams = useSearchParams();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<IMessage[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
+  const [currentChannel, setCurrentChannel] = useState<Channel | undefined | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [newChannelInput, setNewChannelInput] = useState("");
@@ -80,9 +40,6 @@ const ChatInterface: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const initialJoinTimeoutRef = useRef<number | null>(null);
-
-  // Cast client to our simplified interface
-  const tircClient = client as SimpleTircClient | null;
 
   // Generate a unique ID for messages
   const generateUniqueId = () => {
@@ -98,25 +55,39 @@ const ChatInterface: React.FC = () => {
     }
   }, []);
 
-  // Join a channel safely - use sendMessage method instead of join
+  // Force a string to be a valid channel - ensures we never return undefined
+  const asChannel = useCallback((value: string): Channel => {
+    if (!value || typeof value !== 'string') {
+      return "#default" as Channel; // Fallback to a default channel
+    }
+    if (!value.startsWith('#')) {
+      return `#${value}` as Channel;
+    }
+    return value as Channel;
+  }, []);
+
+  // Join a channel safely - correctly handle Channel typing
   const joinChannelSafely = useCallback(
     async (channelToJoin: Channel) => {
-      if (!tircClient || !isConnected) {
+      if (!client || !isConnected) {
         console.log("Cannot join channel - client not available or not connected");
         return false;
       }
 
       try {
         console.log(`Safely joining channel: ${channelToJoin}`);
-        tircClient.sendMessage(channelToJoin, `/join ${channelToJoin}`);
-        console.log(`Successfully joined: ${channelToJoin}`);
+        // Use a constant Channel value for the default channel
+        const defaultChannel: Channel = "#default";
+        // Send a raw JOIN command directly to the server
+        client.sendMessage(defaultChannel, `/JOIN ${channelToJoin}`);
+        console.log(`Join command sent for: ${channelToJoin}`);
         return true;
       } catch (error) {
         console.error(`Error joining channel ${channelToJoin}:`, error);
         return false;
       }
     },
-    [tircClient, isConnected]
+    [client, isConnected]
   );
 
   // Process TIRC messages into our app format
@@ -124,15 +95,17 @@ const ChatInterface: React.FC = () => {
     if (!tircMessages || tircMessages.length === 0) return;
     
     // Get the most recent message with proper null checking
-    const latestMessage = tircMessages[tircMessages.length - 1] as TIRCMessage;
+    const latestMessage = tircMessages[tircMessages.length - 1];
     if (!latestMessage) return;
     
+    console.log("New IRC message:", latestMessage);
+    
     // Convert to our app's message format
-    const newMessage: Message = {
+    const newMessage: IMessage = {
       id: latestMessage.id || generateUniqueId(),
       channel: latestMessage.channel,
-      username: latestMessage.user.toLowerCase(),
-      displayName: latestMessage.user,
+      username: latestMessage.username.toLowerCase(),
+      displayName: latestMessage.username,
       content: latestMessage.rawMessage,
       color: "#FFFFFF", // Default color
       timestamp: new Date(),
@@ -140,16 +113,223 @@ const ChatInterface: React.FC = () => {
       badges: "",
       profileImage: null,
       tags: latestMessage.tags || {}, // Use tags if available
-    };
+    } as IMessage;
     
     setMessages(prev => [...prev, newMessage]);
   }, [tircMessages]);
 
-  // Handle initial joining of channels from URL parameters
+  // Handle initial connection setup
   useEffect(() => {
-    if (!tircClient || !isConnected || initialChannelsJoined || joinAttemptInProgress) return;
+    if (!client) {
+      console.log("No IRC client available");
+      return;
+    }
+
+    console.log("IRC client is available, setting up event handlers");
+
+    // Set initial connection state
+    setConnectionStatus("Connected");
+    setIsConnected(true);
+
+    const handleConnect = () => {
+      console.log("CONNECTED event received");
+      setIsConnected(true);
+      setConnectionStatus("Connected");
+    };
+
+    const handleDisconnect = () => {
+      console.log("DISCONNECTED event received");
+      setIsConnected(false);
+      setConnectionStatus("Disconnected");
+      setInitialChannelsJoined(false);
+      setJoinAttemptInProgress(false);
+    };
+
+    const handleError = (data: { message: string }) => {
+      console.log("ERROR event received:", data);
+      setConnectionStatus(`Error: ${data.message}`);
+    };
+
+    const handleUserJoined = (data: { user:string, channel: Channel }):void => {
+      console.log("USER JOINED event received:", data);
+      // Add system message for user join
+      const joinMessage: IMessage = {
+        id: generateUniqueId(),
+        channel: data.channel,
+        username: "system",
+        displayName: "System",
+        content: `${data.user} joined the channel`,
+        color: "var(--color-success)",
+        timestamp: new Date(),
+        isCurrentUser: false,
+        tags: {},
+      } as IMessage;
+      setMessages(prev => [...prev, joinMessage]);
+    };
+
+    const handleUserLeft = (data:{ user: string; channel: Channel }) => {
+      console.log("USER LEFT event received:", data);
+      // Add system message for user leave
+      const leftMessage: IMessage = {
+        id: generateUniqueId(),
+        channel: data.channel,
+        username: "system",
+        displayName: "System",
+        content: `${data.user} left the channel`,
+        color: "var(--color-error)",
+        timestamp: new Date(),
+        isCurrentUser: false,
+        tags: {},
+      } as IMessage
+      setMessages(prev => [...prev, leftMessage]);
+    };
+
+    // Register event handlers properly
+    client.on("connected", handleConnect);
+    client.on("disconnected", handleDisconnect);
+    client.on("error", handleError);
+    client.on("userJoined", handleUserJoined);
+    client.on("userLeft", handleUserLeft);
+
+    return () => {
+      client.off("connected", handleConnect);
+      client.off("disconnected", handleDisconnect);
+      client.off("error", handleError);
+      client.off("userJoined", handleUserJoined);
+      client.off("userLeft", handleUserLeft);
+    };
+  }, [client]);
+
+  // Handle channel join/leave events with improved stability
+  const handleChannelJoined = useCallback((channelName: string) => {
+    console.log(`JOINED event received for channel: ${channelName}`);
+    
+    // Skip if channelName is invalid
+    if (!channelName || typeof channelName !== 'string') {
+      console.log("Invalid channel name received:", channelName);
+      return;
+    }
+    
+    // Ensure it's a properly formatted channel
+    const validChannel: Channel = asChannel(channelName);
+    
+    console.log(`Chat interface noticed channel joined: ${validChannel}`);
+    
+    setChannels(prev => {
+      console.log("Current channels:", prev);
+      // Normalize channel names for comparison
+      const normalizedExisting = prev.map(ch => ch.toLowerCase());
+      const normalizedNew = validChannel.toLowerCase();
+      
+      if (!normalizedExisting.includes(normalizedNew)) {
+        console.log(`Adding new channel ${validChannel} to list`);
+        const newChannels = [...prev, validChannel];
+        
+        // If this is the first channel, set it as current
+        if (newChannels.length === 1 || !currentChannel) {
+          console.log(`Setting current channel to: ${validChannel}`);
+          setCurrentChannel(validChannel);
+        }
+
+        // Save to localStorage
+        saveChannelsToLocalStorage(newChannels);
+        return newChannels;
+      }
+      
+      console.log(`Channel ${validChannel} already in list, not adding`);
+      return prev;
+    });
+
+    // Add system message about joining
+    const joinMessage: IMessage = {
+      id: generateUniqueId(),
+      channel: validChannel,
+      username: "system",
+      displayName: "System",
+      content: `Joined channel ${validChannel}`,
+      color: "var(--color-success)",
+      timestamp: new Date(),
+      isCurrentUser: false,
+      tags: {},
+    };
+    setMessages(prev => [...prev, joinMessage]);
+  }, [asChannel, currentChannel, saveChannelsToLocalStorage]);
+
+  const handleChannelLeft = useCallback((channelName: string) => {
+    console.log(`LEFT event received for channel: ${channelName}`);
+    
+    // Skip if channelName is invalid
+    if (!channelName || typeof channelName !== 'string') {
+      console.log("Invalid channel name received:", channelName);
+      return;
+    }
+    
+    // Ensure it's a properly formatted channel
+    const validChannel: Channel = asChannel(channelName);
+    
+    // Make a copy of channels for use in the callback
+    const currentChannelsCopy = [...channels];
+    
+    setChannels(prev => {
+      const updatedChannels = prev.filter(ch => ch.toLowerCase() !== validChannel.toLowerCase());
+      console.log(`Removing channel ${validChannel}, updated list:`, updatedChannels);
+      // Save to localStorage
+      saveChannelsToLocalStorage(updatedChannels);
+      return updatedChannels;
+    });
+
+    // Update current channel if needed - fixed to never return undefined
+    setCurrentChannel((current) => {
+      // If the current channel is the one being left, find another
+      if (current?.toLowerCase() === validChannel.toLowerCase()) {
+        // Get channels that will remain
+        const remainingChannels = currentChannelsCopy.filter(
+          ch => ch.toLowerCase() !== validChannel.toLowerCase()
+        );
+        // Return either the first remaining channel or null (never undefined)
+        return remainingChannels.length > 0 ? remainingChannels[0] : null;
+      }
+      // Otherwise, keep the current channel
+      return current;
+    });
+
+    // Add system message about leaving
+    const leaveMessage: IMessage = {
+      id: generateUniqueId(),
+      channel: validChannel,
+      username: "system",
+      displayName: "System",
+      content: `Left channel ${validChannel}`,
+      color: "var(--color-error)",
+      timestamp: new Date(),
+      isCurrentUser: false,
+      tags: {},
+    };
+    setMessages(prev => [...prev, leaveMessage]);
+  }, [asChannel, channels, saveChannelsToLocalStorage]);
+
+  // Register channel event handlers separately with stable references
+  useEffect(() => {
+    if (!client) return;
+    
+    console.log("Setting up channel event handlers");
+    
+    // Register event handlers with stable function references
+    client.on("joined", handleChannelJoined);
+    client.on("left", handleChannelLeft);
+
+    return () => {
+      client.off("joined", handleChannelJoined);
+      client.off("left", handleChannelLeft);
+    };
+  }, [client, handleChannelJoined, handleChannelLeft]);
+
+  // Handle initial joining of channels from URL parameters or localStorage
+  useEffect(() => {
+    if (!client || !isConnected || initialChannelsJoined || joinAttemptInProgress) return;
 
     const joinChannelsFromUrl = async () => {
+      console.log("Attempting to join initial channels");
       setJoinAttemptInProgress(true);
 
       // Get channels from URL
@@ -161,8 +341,8 @@ const ChatInterface: React.FC = () => {
         // Split by comma and format as channels
         channelsToJoin = channelsParam
           .split(",")
-          .map((channel) => channel.trim())
-          .filter((channel) => channel.length > 0)
+          .map(channel => channel.trim())
+          .filter(channel => channel.length > 0)
           .map(asChannel);
 
         console.log("Parsed channels to join:", channelsToJoin);
@@ -223,206 +403,30 @@ const ChatInterface: React.FC = () => {
       }
     };
   }, [
-    tircClient,
+    client,
     isConnected,
     initialChannelsJoined,
     searchParams,
     joinChannelSafely,
     joinAttemptInProgress,
+    asChannel
   ]);
-
-  // Set up connection status when client changes
-  useEffect(() => {
-    if (!tircClient) {
-      console.log("No IRC client available");
-      return;
-    }
-
-    console.log("IRC client is available, setting up event handlers");
-
-    // Set initial connection state
-    setConnectionStatus("Connected");
-    setIsConnected(true);
-
-    const handleConnect = () => {
-      setIsConnected(true);
-      setConnectionStatus("Connected");
-    };
-
-    const handleDisconnect = () => {
-      setIsConnected(false);
-      setConnectionStatus("Disconnected");
-      setInitialChannelsJoined(false);
-      setJoinAttemptInProgress(false);
-    };
-
-    // Type-safe error handler
-    const handleError = (data: { message: string }) => {
-      setConnectionStatus(`Error: ${data.message}`);
-    };
-
-    const handleUserJoined = (data: { user: string; channel: string }) => {
-      // Add system message for user join
-      const joinMessage: Message = {
-        id: generateUniqueId(),
-        channel: data.channel,
-        username: "system",
-        displayName: "System",
-        content: `${data.user} joined the channel`,
-        color: "var(--color-success)",
-        timestamp: new Date(),
-        isCurrentUser: false,
-        tags: {},
-      };
-      setMessages(prev => [...prev, joinMessage]);
-    };
-
-    const handleUserLeft = (data: { user: string; channel: string }) => {
-      // Add system message for user leave
-      const leftMessage: Message = {
-        id: generateUniqueId(),
-        channel: data.channel,
-        username: "system",
-        displayName: "System",
-        content: `${data.user} left the channel`,
-        color: "var(--color-error)",
-        timestamp: new Date(),
-        isCurrentUser: false,
-        tags: {},
-      };
-      setMessages(prev => [...prev, leftMessage]);
-    };
-
-    // Register event handlers properly
-    tircClient.on("connected", handleConnect);
-    tircClient.on("disconnected", handleDisconnect);
-    tircClient.on("error", handleError);
-    tircClient.on("userJoined", handleUserJoined);
-    tircClient.on("userLeft", handleUserLeft);
-
-    return () => {
-      tircClient.off("connected", handleConnect);
-      tircClient.off("disconnected", handleDisconnect);
-      tircClient.off("error", handleError);
-      tircClient.off("userJoined", handleUserJoined);
-      tircClient.off("userLeft", handleUserLeft);
-    };
-  }, [tircClient]);
-
-  // Handle channel list updates
-  useEffect(() => {
-    if (!tircClient) return;
-
-    const handleJoined = (channelName: string) => {
-      // Skip if channelName is invalid
-      if (!channelName || typeof channelName !== 'string') return;
-      
-      // Explicitly create a Channel type - FIX for line 200
-      const validChannel: Channel = asChannel(channelName);
-      
-      console.log(`Chat interface noticed channel joined: ${validChannel}`);
-      
-      setChannels((prev) => {
-        if (!prev.includes(validChannel)) {
-          const newChannels = [...prev, validChannel];
-          // If this is the first channel, set it as current
-          if (newChannels.length === 1 || !currentChannel) {
-            console.log(`Setting current channel to: ${validChannel}`);
-            setCurrentChannel(validChannel);
-          }
-
-          // Save to localStorage
-          saveChannelsToLocalStorage(newChannels);
-          return newChannels;
-        }
-        return prev;
-      });
-
-      // Add system message about joining
-      const joinMessage: Message = {
-        id: generateUniqueId(),
-        channel: validChannel,
-        username: "system",
-        displayName: "System",
-        content: `Joined channel ${validChannel}`,
-        color: "var(--color-success)",
-        timestamp: new Date(),
-        isCurrentUser: false,
-        tags: {},
-      };
-      setMessages((prev) => [...prev, joinMessage]);
-    };
-
-    const handleLeft = (channelName: string) => {
-      // Skip if channelName is invalid
-      if (!channelName || typeof channelName !== 'string') return;
-      
-      // Explicitly create a Channel type
-      const validChannel: Channel = asChannel(channelName);
-      
-      // Make a copy of channels for use in the callback
-      const currentChannelsCopy = [...channels];
-      
-      setChannels((prev) => {
-        const updatedChannels = prev.filter((ch) => ch !== validChannel);
-        // Save to localStorage
-        saveChannelsToLocalStorage(updatedChannels);
-        return updatedChannels;
-      });
-
-      // FIX for line 374 - ensure the callback never returns undefined
-      setCurrentChannel((current) => {
-        // If the current channel is the one being left, find another
-        if (current === validChannel) {
-          // Get channels that will remain
-          const remainingChannels = currentChannelsCopy.filter(ch => ch !== validChannel);
-          // Return either the first remaining channel or null (never undefined)
-          return remainingChannels.length > 0 ? remainingChannels[0] : null;
-        }
-        // Otherwise, keep the current channel
-        return current;
-      });
-
-      // Add system message about leaving
-      const leaveMessage: Message = {
-        id: generateUniqueId(),
-        channel: validChannel,
-        username: "system",
-        displayName: "System",
-        content: `Left channel ${validChannel}`,
-        color: "var(--color-error)",
-        timestamp: new Date(),
-        isCurrentUser: false,
-        tags: {},
-      };
-      setMessages((prev) => [...prev, leaveMessage]);
-    };
-
-    // Type-safe event registration
-    tircClient.on("joined", handleJoined);
-    tircClient.on("left", handleLeft);
-
-    return () => {
-      tircClient.off("joined", handleJoined);
-      tircClient.off("left", handleLeft);
-    };
-  }, [tircClient, channels, currentChannel, saveChannelsToLocalStorage]);
 
   // Send message function
   const sendMessage = (content: string = messageInput) => {
     // Early return if no content, no channel, or no client
-    if (!content.trim() || !currentChannel || !tircClient) return;
+    if (!content.trim() || !currentChannel || !client) return;
 
     console.log(`Attempting to send message to ${currentChannel}: ${content}`);
 
     try {
-      // FIX for line 516 - currentChannel is guaranteed to be valid and non-null here
+      // Make sure we have a valid channel
       tircSendMessage(currentChannel, content);
 
       // Add self message to the UI
-      const username = tircClient.getNick?.() || "butterbot";
+      const username = client.getNick?.() || "butterbot";
       
-      const selfMessage: Message = {
+      const selfMessage: IMessage = {
         id: generateUniqueId(),
         channel: currentChannel,
         username: username,
@@ -441,7 +445,7 @@ const ChatInterface: React.FC = () => {
       console.error("Error sending message:", error);
 
       // Add error message to chat
-      const errorMessage: Message = {
+      const errorMessage: IMessage = {
         id: generateUniqueId(),
         channel: currentChannel,
         username: "system",
@@ -461,9 +465,9 @@ const ChatInterface: React.FC = () => {
   // Join a new channel
   const joinChannel = () => {
     // Early return if requirements not met
-    if (!newChannelInput.trim() || !isConnected || !tircClient) return;
+    if (!newChannelInput.trim() || !isConnected || !client) return;
 
-    // FIX for line 535 - Create a properly typed channel
+    // Create a properly typed channel
     const channelToJoin: Channel = asChannel(newChannelInput);
 
     try {
@@ -475,7 +479,7 @@ const ChatInterface: React.FC = () => {
 
       // Use a literal to ensure we have a valid Channel for system messages
       const systemChannel: Channel = currentChannel || "#system";
-      const errorMessage: Message = {
+      const errorMessage: IMessage = {
         id: generateUniqueId(),
         channel: systemChannel,
         username: "system",
@@ -494,11 +498,13 @@ const ChatInterface: React.FC = () => {
 
   // Leave a specific channel
   const leaveChannel = (channelToLeave: Channel) => {
-    if (!isConnected || !tircClient) return;
+    if (!isConnected || !client) return;
 
     try {
-      // Use sendMessage to send a PART command
-      tircClient.sendMessage(channelToLeave, `/part ${channelToLeave}`);
+      // Correct way to send a PART command - use a constant for the default Channel
+      const defaultChannel: Channel = "#default";
+      console.log(`Leaving channel: ${channelToLeave}`);
+      client.sendMessage(defaultChannel, `/PART ${channelToLeave}`);
     } catch (error) {
       console.error("Failed to leave channel:", error);
     }
@@ -569,7 +575,7 @@ const ChatInterface: React.FC = () => {
   };
 
   // Show loading state if client is not yet available
-  if (!tircClient) {
+  if (!client) {
     return (
       <div className="flex items-center justify-center h-screen bg-background text-text">
         <div className="text-center p-8 bg-surface rounded-lg">
@@ -592,6 +598,9 @@ const ChatInterface: React.FC = () => {
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
+
+  console.log("Current channels:", channels);
+  console.log("Current selected channel:", currentChannel);
 
   return (
     <div className="flex flex-col h-screen bg-background text-text">
@@ -649,4 +658,4 @@ const ChatInterface: React.FC = () => {
   );
 };
 
-export default ChatInterface; 
+export default ChatInterface;

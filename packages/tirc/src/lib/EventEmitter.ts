@@ -1,3 +1,4 @@
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class EventEmitter<TEvents extends Record<string, any>> {
   private listeners: { [K in keyof TEvents]?: Array<(data: TEvents[K]) => void> } = {};
 

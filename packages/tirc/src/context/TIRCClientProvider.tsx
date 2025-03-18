@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { TIRCClient, ITIRCClientConfig } from "../lib/TIRCClient";
-import { IMessage, TIRCContext, Channel } from "../hooks/useTIRC";
-import { IEmote } from "../utils/emoteUtils";
+import { IMessage,  Channel, IEmote } from "../types";
+import { TIRCContext } from "../hooks/useTIRC";
 
 // Helper functions to replace missing imports
 const formatMessageWithEmotes = (message: string, emotes: IEmote[]): string => {
@@ -52,17 +52,17 @@ export const TIRCClientProvider: React.FC<{ config: ITIRCClientConfig; children:
     ircClient.connect().catch((err) => console.error("Error connecting to Twitch IRC:", err));
 
     // Listen for incoming chat messages
-    ircClient.on("messageReceived", ({ user, message, channel, tags }) => {
+    ircClient.on("messageReceived", ({ user, message, channel, tags } ) => {
       const formattedMessage = formatMessageWithEmotes(message, []); // Placeholder for emotes
       const newMessage: IMessage = {
         id: `${Date.now()}-${Math.random()}`, // Unique ID
-        user,
+        username: user,
         channel,
         rawMessage: message,
         formattedMessage,
         emotes: extractEmotesFromMessage(message, []), // Placeholder for emote processing
         tags,
-      };
+      } as IMessage;
       setMessages((prev) => [...prev, newMessage]);
     });
 

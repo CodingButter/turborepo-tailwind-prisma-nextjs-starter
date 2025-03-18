@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useContext, useCallback } from "react";
-import { fetchBTTVGlobalEmotes, fetchFFZGlobalEmotes, fetchTwitchEmotes, IEmote } from "../utils/emoteUtils";
+import { fetchBTTVGlobalEmotes, fetchFFZGlobalEmotes, fetchTwitchEmotes, IEmote } from "../";
 import { EmoteContext } from "../hooks/useEmotes";
 import { TIRCContext } from "../hooks/useTIRC";
 

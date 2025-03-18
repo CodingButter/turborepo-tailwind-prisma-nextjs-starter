@@ -1,8 +1,6 @@
 'use client'
 import { EventEmitter } from "./EventEmitter";
-
-// Define Channel type explicitly for consistent use
-export type Channel = string;
+import type { Channel, TIRCEvents } from "../types";
 
 /**
  * Defines the structure of the IRC Client configuration.
@@ -19,16 +17,6 @@ export interface ITIRCClientConfig {
 /**
  * Defines the events that the IRC client will emit.
  */
-export type TIRCEvents = {
-  messageReceived: { user: string; message: string; channel: string; tags?: Record<string, string> };
-  userJoined: { user: string; channel: string };
-  userLeft: { user: string; channel: string };
-  error: { message: string };
-  disconnected: { reason?: string };
-  connected: { timestamp: number };
-  joined: Channel;  // Using Channel type here
-  left: Channel;    // Using Channel type here
-};
 
 /**
  * IRC Client for connecting to Twitch chat.
@@ -197,7 +185,7 @@ export class TIRCClient extends EventEmitter<TIRCEvents> {
         const [, user, channelStr, message] = messageMatch;
         // Check that all required values are defined
         if (user && channelStr && message) {
-          this.emit("messageReceived", { user, message, channel: channelStr, tags });
+          this.emit("messageReceived", { user, message, channel: channelStr as unknown as Channel, tags });
         }
         continue;
       }

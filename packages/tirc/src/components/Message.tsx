@@ -1,6 +1,6 @@
 'use client'
 import React from "react";
-import { IMessage } from "../hooks/useTIRC"; // Fixed: Import from hooks/useTIRC instead of context
+import { IMessage } from "../"; // Fixed: Import from hooks/useTIRC instead of context
 
 /**
  * Props for the Message component.
@@ -31,7 +31,7 @@ export const Message: React.FC<MessageProps> = ({ message, emoteSize = "1x", cla
 
   return (
     <div className={`message ${className || ""}`}>
-      <strong>{message.user}:</strong>{" "}
+      <strong>{message.username}:</strong>{" "}
       <span dangerouslySetInnerHTML={{ __html: formatMessageWithEmoteSize(message.formattedMessage) }} />
     </div>
   );

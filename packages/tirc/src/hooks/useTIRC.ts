@@ -2,7 +2,7 @@
 
 import { useContext, createContext } from "react";
 import { TIRCClient } from "../lib/TIRCClient";
-import { IEmote } from "../";
+import {  IMessage } from "../types";
 
 // Define Channel type to match what's used in TIRCClient
 export type Channel = `#${string}`;
@@ -10,15 +10,6 @@ export type Channel = `#${string}`;
 /**
  * Defines the structure of a chat message.
  */
-export interface IMessage {
-  id: string;
-  user: string;
-  channel: string;
-  rawMessage: string;
-  formattedMessage: string;
-  emotes: IEmote[];
-  tags?: Record<string, string>;
-}
 
 export interface TIRCContextType {
   client: TIRCClient | null;

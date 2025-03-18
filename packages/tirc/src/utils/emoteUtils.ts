@@ -1,5 +1,6 @@
 'use client';
 
+import { IEmote, EmotePosition, EmoteInfo, MessagePart, IBTTVEmote, ITwitchEmote,IFFZEmote  } from "../types";
 // API Base URLs
 const BTTV_API_BASE = "https://api.betterttv.net/3/cached";
 const FFZ_API_BASE = "https://api.frankerfacez.com/v1";
@@ -22,58 +23,6 @@ const getWordBoundaryRegex = (term: string): RegExp => {
   return regexCache.get(term)!;
 };
 
-/**
- * Defines the structure of an emote.
- */
-export interface IEmote {
-  id: string;
-  name: string;
-  urls: {
-    "1x"?: string;
-    "2x"?: string;
-    "3x"?: string;
-    "4x"?: string;
-  };
-}
-
-export interface IBTTVEmote {
-  id: string;
-  code: string;
-}
-
-export interface IFFZEmote {
-  id: number;
-  name: string;
-  urls: {
-    "1": string;
-    "2"?: string;
-    "3"?: string;
-    "4"?: string;
-  };
-}
-
-export interface ITwitchEmote {
-  id: string;
-  name: string;
-  images: {
-    url_1x: string;
-    url_2x?: string;
-    url_3x?: string;
-    url_4x?: string;
-  };
-}
-
-export interface EmotePosition {
-  start: number;
-  end: number;
-}
-
-export interface EmoteInfo {
-  id: string;
-  code: string;
-}
-
-export type MessagePart = string | EmoteInfo;
 
 // Helper functions for transforming API responses
 const convertBTTVEmote = (emote: IBTTVEmote): IEmote => ({
@@ -85,7 +34,7 @@ const convertBTTVEmote = (emote: IBTTVEmote): IEmote => ({
     "3x": bttvUrl(emote.id, "3x"),
     "4x": bttvUrl(emote.id, "4x"),
   },
-});
+} as IEmote);
 
 const convertFFZEmote = (emote: IFFZEmote): IEmote => {
   const id = emote.id.toString();
@@ -98,7 +47,7 @@ const convertFFZEmote = (emote: IFFZEmote): IEmote => {
       "3x": emote.urls["3"] || emote.urls["2"] || emote.urls["1"] || "",
       "4x": emote.urls["4"] || emote.urls["3"] || emote.urls["2"] || emote.urls["1"] || "",
     },
-  };
+  } as IEmote;
 };
 
 const convertTwitchEmote = (emote: ITwitchEmote): IEmote => ({
@@ -110,7 +59,7 @@ const convertTwitchEmote = (emote: ITwitchEmote): IEmote => ({
     "3x": emote.images.url_3x || emote.images.url_2x || emote.images.url_1x || "",
     "4x": emote.images.url_4x || emote.images.url_3x || emote.images.url_2x || emote.images.url_1x || "",
   },
-});
+} as IEmote);
 
 // Generic error handling for fetch operations
 const safeApiFetch = async <T>(
