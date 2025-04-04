@@ -1,17 +1,26 @@
 // packages/storage/src/useStorage.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useStorage } from './useStorage';
+import '@testing-library/jest-dom';
+import { jest, expect } from '@jest/globals';
+
+beforeEach(() => {
+	Object.defineProperty(global, 'localStorage', {
+	  value: {
+		getItem: jest.fn(),
+		setItem: jest.fn(),
+		clear: jest.fn(),
+	  },
+	  writable: true,
+	});
+  });
 
 jest.mock('react', () => {
-	const originalReact = jest.requireActual('react');
+	const originalReact = jest.requireActual('react') as typeof import('react');
 
 	return {
+		__esModule: true,
 		...originalReact,
-		useState: jest.fn().mockImplementation((initialValue) => {
-			// Use mockPrefix to avoid Jest error
-			const mockSetState = jest.fn();
-			return [initialValue, mockSetState];
-		}),
 	};
 });
 

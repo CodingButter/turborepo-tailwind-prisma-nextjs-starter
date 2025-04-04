@@ -2,7 +2,13 @@
 	"extends": "./packages/typescript-config/base.json",
 	"compilerOptions": {
 		"esModuleInterop": true,
-		"baseUrl": "."
+		"baseUrl": ".",
+		// tsconfig.json or tsconfig.base.json at your monorepo root
+
+		"paths": {
+			"@repo/storage": ["./packages/storage/src/index.ts"],
+			"@repo/theme": ["./packages/theme/src"]
+		}
 	},
 	"include": ["**/*.ts", "**/*.tsx", "jest.setup.js"],
 	"exclude": ["node_modules"]

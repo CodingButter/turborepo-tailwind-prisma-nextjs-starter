@@ -1,9 +1,6 @@
-const { expect, jest } = require('@jest/globals');
-
-// Ensure global expect is defined
-global.expect = expect;
-
-// Mock window.matchMedia for theme media queries
+import { jest } from '@jest/globals';
+import '@testing-library/jest-dom';
+// Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
 	writable: true,
 	value: jest.fn().mockImplementation((query) => ({
@@ -18,7 +15,7 @@ Object.defineProperty(window, 'matchMedia', {
 	})),
 });
 
-// Mock localStorage for storage hooks
+// Mock localStorage
 const store = {};
 const localStorageMock = {
 	getItem: jest.fn((key) => store[key] || null),
@@ -41,21 +38,7 @@ Object.defineProperty(window, 'localStorage', {
 	value: localStorageMock,
 });
 
-// Add custom matchers
-expect.extend({
-	toBeInTheDocument(received) {
-		const pass = received !== null;
-		return {
-			pass,
-			message: () => `expected ${received} to be in the document`,
-		};
-	},
-});
-
-// Import jest-dom
-require('@testing-library/jest-dom');
-
-// Suppress React 19 + testing-library version mismatch warnings
+// Suppress specific warnings
 jest.spyOn(console, 'error').mockImplementation((message) => {
 	if (
 		message &&

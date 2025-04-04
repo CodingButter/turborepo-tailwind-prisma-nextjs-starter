@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { useTheme, ThemeContext, ThemeMode } from './useTheme';
+import '@testing-library/jest-dom';
+import { jest, expect } from '@jest/globals';
 
 // Test component that uses the hook
 const TestComponent = () => {

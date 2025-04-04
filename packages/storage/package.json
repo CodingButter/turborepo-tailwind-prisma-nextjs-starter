@@ -4,8 +4,7 @@
 	"private": true,
 	"exports": "./src/useStorage.ts",
 	"scripts": {
-		"lint": "eslint . --max-warnings 0",
-		"test": "jest --config ../../jest.config.cjs"
+		"lint": "eslint . --max-warnings 0"
 	},
 	"devDependencies": {
 		"@repo/eslint-config": "workspace:*",
